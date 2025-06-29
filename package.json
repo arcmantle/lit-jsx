@@ -1,0 +1,52 @@
+{
+	"name": "@arcmantle/lit-jsx",
+	"description": "A JSX runtime and compiler that transforms JSX into Lit templates.",
+	"license": "Apache-2.0",
+	"contributors": [
+		"Kristoffer Roen-Lie"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/arcmantle/lit-jsx.git"
+	},
+	"version": "1.1.2",
+	"files": [
+		"dist",
+		"src"
+	],
+	"type": "module",
+	"main": "./dist/react-jsx/jsx-runtime.js",
+	"types": "./dist/shared/jsx-types.d.ts",
+	"exports": {
+		".": "./dist/utils.js",
+		"./jsx-runtime": "./dist/shared/jsx-types.d.ts",
+		"./jsx-dev-runtime": "./dist/shared/jsx-types.d.ts",
+		"./vite": "./dist/compiler/vite-plugin.js"
+	},
+	"sideEffects": false,
+	"scripts": {
+		"dev": "vite build --watch --mode=development",
+		"test": "pnpm vitest run",
+		"build-ts": "rimraf dist && tsc --project ./src/tsconfig.json",
+		"build": "pnpm run --sequential \"/^build::.?/\"",
+		"build::js": "vite build",
+		"build::types": "tsc --project ./src/tsconfig.json --noEmit false"
+	},
+	"dependencies": {
+		"@babel/core": "^7.20.12",
+		"@babel/types": "^7.27.6",
+		"@babel/plugin-syntax-jsx": "^7.18.6",
+		"@types/babel__core": "^7.20.5",
+		"@types/babel__traverse": "^7.20.7",
+		"@babel/traverse": "^7.27.4",
+		"csstype": "^3.1.3",
+		"validate-html-nesting": "^1.2.1",
+		"merge-anything": "^6.0.6"
+	},
+	"devDependencies": {
+		"lit-html": "^3.3.0",
+		"vite": "^7.0.0",
+		"vitest": "^3.2.4",
+		"typescript": "^5.8.3"
+	}
+}

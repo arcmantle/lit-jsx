@@ -1,0 +1,20 @@
+{
+	"name": "@arcmantle/lit-jsx",
+	"version": "1.1.2",
+	"license": "Apache-2.0",
+	"description": "A powerful JSX compiler and Vite plugin that transforms JSX into native Lit templates at compile time with zero runtime overhead",
+	"exports": {
+		".": "./src/utils.ts",
+		"./jsx-runtime": "./src/shared/jsx-types.ts",
+		"./jsx-dev-runtime": "./src/shared/jsx-types.ts",
+		"./vite-jsx-react": "./src/react-jsx/vite-plugin.ts",
+		"./vite": "./src/compiler/vite-plugin.ts"
+	},
+	"publish": {
+		"include": [
+			"src",
+			"README.md",
+			"CHANGELOG.md"
+		]
+	}
+}
