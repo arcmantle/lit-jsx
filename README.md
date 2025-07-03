@@ -1,4 +1,4 @@
-# jsx-lit
+# lit-jsx
 
 A powerful JSX compiler and Vite plugin that transforms JSX into native Lit templates at compile time with zero runtime overhead.
 
@@ -118,12 +118,14 @@ export class MyComponent extends LitElement {
 jsx-lit provides precise control over how values are bound to elements:
 
 #### Default Behavior (Attribute Binding)
+
 ```tsx
 <input value={userInput} />
 // Compiles to: <input value=${userInput} />
 ```
 
 #### Property Binding
+
 ```tsx
 <input value={as.prop(userInput)} />
 // or
@@ -132,6 +134,7 @@ jsx-lit provides precise control over how values are bound to elements:
 ```
 
 #### Boolean Attribute Binding
+
 ```tsx
 <input disabled={as.bool(isDisabled)} />
 // or
@@ -142,30 +145,35 @@ jsx-lit provides precise control over how values are bound to elements:
 ### Special Attributes
 
 #### classList - Object to Class Mapping
+
 ```tsx
 <div classList={{ active: isActive, disabled: !isEnabled }}>
 // Compiles to: <div class=${classMap({ active: isActive, disabled: !isEnabled })}>
 ```
 
 #### styleList - Object to Style Mapping
+
 ```tsx
 <div styleList={{ color: textColor, fontSize: '16px' }}>
 // Compiles to: <div style=${styleMap({ color: textColor, fontSize: '16px' })}>
 ```
 
 #### Event Handlers
+
 ```tsx
 <button on-click={handleClick} on-dblclick={handleDoubleClick}>
 // Compiles to: <button @click=${handleClick} @dblclick=${handleDoubleClick}>
 ```
 
 #### References
+
 ```tsx
 <input ref={inputRef} />
 // Compiles to: <input ${ref(inputRef)} />
 ```
 
 #### Element Directives
+
 ```tsx
 <div directive={myDirective()} />
 // Compiles to: <div ${myDirective()} />
@@ -176,6 +184,7 @@ jsx-lit provides precise control over how values are bound to elements:
 ```
 
 #### Spread Attributes
+
 ```tsx
 <div {...dynamicProps} />
 // Compiles to: <div ${__$rest(dynamicProps)} />
@@ -208,6 +217,7 @@ const Button = ({ label, variant = 'primary', disabled, onClick, children }) => 
 ```
 
 Function components:
+
 - Receive props as a single object parameter
 - Support `children` via the `children` property
 - Compile to efficient function calls
@@ -337,6 +347,7 @@ import { For } from 'jsx-lit';
 ```
 
 The `For` component automatically uses lit-html's optimized directives:
+
 - **Without key**: Uses `map` directive for simple iteration
 - **With key**: Uses `repeat` directive for efficient updates when items change
 - **With separator**: Uses `join` directive to insert elements between items
@@ -670,7 +681,8 @@ jsx-lit automatically detects and uses the appropriate template type:
 
 ### When to Use Each Binding Type
 
-**Attribute Binding (Default)**
+#### **Attribute Binding (Default)**
+
 - Custom attributes and data attributes
 - Values that should appear in HTML as attributes
 - Working with libraries that expect attributes
@@ -679,7 +691,8 @@ jsx-lit automatically detects and uses the appropriate template type:
 <div data-id={item.id} aria-label={item.description} />
 ```
 
-**Property Binding (`as.prop()` or `prop =>`)**
+#### **Property Binding (`as.prop()` or `prop =>`)**
+
 - Standard DOM properties like `value`, `checked`, `selected`
 - Interactive elements that need live property updates
 - Complex object values
@@ -688,7 +701,8 @@ jsx-lit automatically detects and uses the appropriate template type:
 <input value={as.prop(formData.email)} checked={as.prop(isSelected)} />
 ```
 
-**Boolean Attribute Binding (`as.bool()` or `bool =>`)**
+#### **Boolean Attribute Binding (`as.bool()` or `bool =>`)**
+
 - Boolean HTML attributes like `disabled`, `hidden`, `readonly`
 - Accessibility attributes that follow boolean patterns
 - Presence/absence semantics

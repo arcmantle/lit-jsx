@@ -9,7 +9,7 @@
 		"type": "git",
 		"url": "git+https://github.com/arcmantle/lit-jsx.git"
 	},
-	"version": "1.1.2",
+	"version": "1.0.0",
 	"files": [
 		"dist",
 		"src"
