@@ -27,10 +27,7 @@
 	"scripts": {
 		"dev": "vite build --watch --mode=development",
 		"test": "pnpm vitest run",
-		"build-ts": "rimraf dist && tsc --project ./src/tsconfig.json",
-		"build": "pnpm run --sequential \"/^build::.?/\"",
-		"build::js": "vite build",
-		"build::types": "tsc --project ./src/tsconfig.json --noEmit false"
+		"build": "rimraf dist && tsc --project ./src/tsconfig.json"
 	},
 	"dependencies": {
 		"@babel/core": "^7.20.12",
