@@ -4,7 +4,7 @@ A powerful JSX compiler and Vite plugin that transforms JSX into native Lit temp
 
 ## 🚀 Features
 
-jsx-lit brings the familiar JSX syntax to the Lit ecosystem while maintaining the performance and capabilities that make Lit exceptional.
+lit-jsx brings the familiar JSX syntax to the Lit ecosystem while maintaining the performance and capabilities that make Lit exceptional.
 
 ```tsx
 // Write familiar JSX
@@ -53,11 +53,11 @@ html`
 ## 📦 Installation
 
 ```bash
-npm install jsx-lit
+npm install @arcmantle/lit-jsx
 # or
-pnpm add jsx-lit
+pnpm add @arcmantle/lit-jsx
 # or
-yarn add jsx-lit
+yarn add @arcmantle/lit-jsx
 ```
 
 ## ⚡ Quick Start
@@ -66,7 +66,7 @@ yarn add jsx-lit
 
 ```typescript
 // vite.config.ts
-import { litJsx } from 'jsx-lit/vite-jsx-preserve';
+import { litJsx } from '@arcmantle/lit-jsx/vite-jsx-preserve';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -80,7 +80,7 @@ export default defineConfig({
 {
   "compilerOptions": {
     "jsx": "preserve",
-    "jsxImportSource": "jsx-lit"
+    "jsxImportSource": "lit-jsx"
   }
 }
 ```
@@ -89,13 +89,13 @@ export default defineConfig({
 
 ```tsx
 import { LitElement } from 'lit';
-import { For, Show, Choose } from 'jsx-lit';
+import { For, Show, Choose } from '@arcmantle/lit-jsx';
 
 export class MyComponent extends LitElement {
   render() {
     return (
       <div>
-        <h1>Hello jsx-lit!</h1>
+        <h1>Hello lit-jsx!</h1>
         <p>JSX compiled to Lit templates with utility components</p>
 
         <Show when={this.items.length > 0}>
@@ -115,7 +115,7 @@ export class MyComponent extends LitElement {
 
 ### Attribute Binding Control
 
-jsx-lit provides precise control over how values are bound to elements:
+lit-jsx provides precise control over how values are bound to elements:
 
 #### Default Behavior (Attribute Binding)
 
@@ -194,7 +194,7 @@ jsx-lit provides precise control over how values are bound to elements:
 
 ### Function Components
 
-jsx-lit fully supports function components that return JSX:
+lit-jsx fully supports function components that return JSX:
 
 ```tsx
 const Button = ({ label, variant = 'primary', disabled, onClick, children }) => (
@@ -228,7 +228,7 @@ Function components:
 Use `toJSX()` for type-safe custom element components:
 
 ```tsx
-import { toJSX } from 'jsx-lit';
+import { toJSX } from '@arcmantle/lit-jsx';
 import { LitElement } from 'lit';
 
 export class MyButton extends LitElement {
@@ -252,7 +252,7 @@ export class MyButton extends LitElement {
 For custom elements with generic types, you can create type-safe JSX components using explicit type casting:
 
 ```tsx
-import { toJSX } from 'jsx-lit';
+import { toJSX } from '@arcmantle/lit-jsx';
 import { LitElement } from 'lit';
 
 class DataList<T> extends LitElement {
@@ -287,14 +287,14 @@ class DataList<T> extends LitElement {
 />
 ```
 
-**Note**: The current generic syntax requires explicit type casting due to TypeScript's limitations in forwarding generic parameters through static properties. If TypeScript gains the ability to forward generics in this context in the future, jsx-lit will implement a more seamless syntax.
+**Note**: The current generic syntax requires explicit type casting due to TypeScript's limitations in forwarding generic parameters through static properties. If TypeScript gains the ability to forward generics in this context in the future, lit-jsx will implement a more seamless syntax.
 
 ### Dynamic Tag Names
 
-jsx-lit supports dynamic element types with the `.tag` property pattern:
+lit-jsx supports dynamic element types with the `.tag` property pattern:
 
 ```tsx
-import { toTag } from 'jsx-lit';
+import { toTag } from '@arcmantle/lit-jsx';
 
 function ActionElement({ href, children }) {
   const Tag = toTag(href ? 'a' : 'button');
@@ -311,14 +311,14 @@ function ActionElement({ href, children }) {
 
 ### Library Components
 
-jsx-lit provides utility components that enhance common patterns and integrate seamlessly with Lit directives:
+lit-jsx provides utility components that enhance common patterns and integrate seamlessly with Lit directives:
 
 #### For Component - Declarative List Rendering
 
 The `For` component provides a declarative way to render lists with optional keys and separators:
 
 ```tsx
-import { For } from 'jsx-lit';
+import { For } from '@arcmantle/lit-jsx';
 
 // Basic list rendering
 <For each={users}>
@@ -357,7 +357,7 @@ The `For` component automatically uses lit-html's optimized directives:
 The `Show` component provides type-safe conditional rendering with optional fallback:
 
 ```tsx
-import { Show } from 'jsx-lit';
+import { Show } from '@arcmantle/lit-jsx';
 
 // Simple conditional rendering
 <Show when={user}>
@@ -402,7 +402,7 @@ The `Show` component uses lit-html's `when` directive internally and provides st
 The `Choose` component enables clean switch-like conditional rendering with multiple condition-output pairs:
 
 ```tsx
-import { Choose } from 'jsx-lit';
+import { Choose } from '@arcmantle/lit-jsx';
 
 // Multiple conditions based on a value
 <Choose value={status}>
@@ -465,7 +465,7 @@ The `Choose` component evaluates conditions in order and renders the first match
 These components work seamlessly together for complex rendering scenarios:
 
 ```tsx
-import { For, Show, Choose } from 'jsx-lit';
+import { For, Show, Choose } from '@arcmantle/lit-jsx';
 
 @customElement('user-dashboard')
 export class UserDashboard extends LitElement {
@@ -548,7 +548,7 @@ export class UserDashboard extends LitElement {
 
 ### Lit Directives Integration
 
-jsx-lit works seamlessly with all Lit directives:
+lit-jsx works seamlessly with all Lit directives:
 
 ```tsx
 import { when } from 'lit-html/directives/when.js';
@@ -650,7 +650,7 @@ export class TodoList extends LitElement {
 ### Vite Plugin Options
 
 ```typescript
-import { litJsx } from 'jsx-lit/vite-jsx-preserve';
+import { litJsx } from '@arcmantle/lit-jsx/vite-jsx-preserve';
 
 export default defineConfig({
   plugins: [
@@ -670,7 +670,7 @@ export default defineConfig({
 
 ## 🚀 Template Types
 
-jsx-lit automatically detects and uses the appropriate template type:
+lit-jsx automatically detects and uses the appropriate template type:
 
 - **HTML templates**: `html\`...\`` for regular HTML elements
 - **SVG templates**: `svg\`...\`` for SVG elements
@@ -727,7 +727,7 @@ jsx-lit automatically detects and uses the appropriate template type:
 
 ## 🔗 Ecosystem Integration
 
-jsx-lit is designed to work seamlessly with the entire Lit ecosystem:
+lit-jsx is designed to work seamlessly with the entire Lit ecosystem:
 
 - **Lit Elements**: Full compatibility with LitElement and reactive properties
 - **Lit Directives**: All official and community directives work out of the box
@@ -739,13 +739,13 @@ jsx-lit is designed to work seamlessly with the entire Lit ecosystem:
 
 ### From React JSX
 
-jsx-lit syntax is very similar to React, with a few key differences:
+lit-jsx syntax is very similar to React, with a few key differences:
 
 ```tsx
 // React
 <button onClick={handler} className="btn" />
 
-// jsx-lit
+// lit-jsx
 <button on-click={handler} class="btn" />
 ```
 
@@ -755,13 +755,13 @@ jsx-lit syntax is very similar to React, with a few key differences:
 // Lit html
 html`<div class=${classMap(classes)}>${content}</div>`
 
-// jsx-lit
+// lit-jsx
 <div classList={classes}>{content}</div>
 ```
 
 ## 🤝 Contributing
 
-jsx-lit is part of the larger Weave project. Contributions are welcome!
+lit-jsx is part of the larger Weave project. Contributions are welcome!
 
 ## 📄 License
 
