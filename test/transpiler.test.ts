@@ -1,7 +1,7 @@
 /* eslint-disable @stylistic/max-len */
 
 import * as babel from '@babel/core';
-import { describe, test } from 'vitest';
+import { suite, test } from 'vitest';
 
 import { litJsxBabelPreset } from '../src/compiler/babel-preset.ts';
 
@@ -9,7 +9,47 @@ import { litJsxBabelPreset } from '../src/compiler/babel-preset.ts';
 type BabelPlugins = NonNullable<NonNullable<babel.TransformOptions['parserOpts']>['plugins']>;
 
 
-describe('Comprehensive JSX to Lit Transpiler Tests', () => {
+/**
+ * Removes common leading whitespace from template strings to allow for clean indentation
+ */
+const dedent = (str: string): string => {
+	const lines = str.split('\n');
+
+	// Remove leading and trailing empty lines
+	while (lines.length > 0 && lines[0]?.trim() === '')
+		lines.shift();
+
+	while (lines.length > 0 && lines[lines.length - 1]?.trim() === '')
+		lines.pop();
+
+	if (lines.length === 0)
+		return '';
+
+	// Find the minimum indentation (excluding empty lines)
+	const nonEmptyLines = lines.filter(line => line.trim() !== '');
+
+	if (nonEmptyLines.length === 0)
+		return '';
+
+	const minIndent = Math.min(...nonEmptyLines.map(line => {
+		const match = line.match(/^(\s*)/);
+
+		return match?.[1]?.length ?? 0;
+	}));
+
+	// Remove the common indentation from all lines
+	const dedentedLines = lines.map(line => {
+		if (line.trim() === '')
+			return '';
+
+		return line.slice(minIndent);
+	});
+
+	return dedentedLines.join('\n');
+};
+
+
+suite('JSX to Lit Transpiler Tests', () => {
 	const getOpts = (): babel.TransformOptions => ({
 		root:           '.',
 		filename:       'test.tsx',
@@ -33,14 +73,23 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 	// ========== BASIC ELEMENT TESTS ==========
 
 	test('transforms empty fragment', async ({ expect }) => {
-		const source = `
-		const template = <></>;
-		`;
+		const source = dedent(`
+			const template = <></>;
+		`);
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Empty fragment:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	test('transforms div with static text content', async ({ expect }) => {
@@ -48,10 +97,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div>Static text content</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Static text:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>Static text content</div>\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	test('transforms self-closing element', async ({ expect }) => {
@@ -59,10 +117,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <input type="text" />;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Self-closing:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<input type="text"></input>\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	// ========== EXPRESSION TESTS ==========
@@ -73,10 +140,23 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div>Hello {name}</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Single expression:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>Hello<?></div>\`,
+			  "parts": [{
+			    "type": 2,
+			    "index": 1
+			  }]
+			};
+			const name = 'World';
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [name]
+			};
+		`));
 	});
 
 	test('transforms element with multiple expressions', async ({ expect }) => {
@@ -86,10 +166,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div>{first} {second}</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Multiple expressions:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div><?><?></div>\`,
+			  "parts": [{
+			    "type": 2,
+			    "index": 1
+			  }, {
+			    "type": 2,
+			    "index": 1
+			  }]
+			};
+			const first = 'Hello';
+			const second = 'World';
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [first, second]
+			};
+		`));
 	});
 
 	test('transforms element with complex expression', async ({ expect }) => {
@@ -98,10 +195,29 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div>User: {user.name} ({user.age} years old)</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Complex expression:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>User:<?>(<?>years old)</div>\`,
+			  "parts": [{
+			    "type": 2,
+			    "index": 1
+			  }, {
+			    "type": 2,
+			    "index": 1
+			  }]
+			};
+			const user = {
+			  name: 'John',
+			  age: 30
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [user.name, user.age]
+			};
+		`));
 	});
 
 	test('transforms element with conditional expression', async ({ expect }) => {
@@ -110,10 +226,23 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div>{isLoggedIn ? 'Welcome' : 'Please log in'}</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Conditional expression:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div><?></div>\`,
+			  "parts": [{
+			    "type": 2,
+			    "index": 1
+			  }]
+			};
+			const isLoggedIn = true;
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [isLoggedIn ? 'Welcome' : 'Please log in']
+			};
+		`));
 	});
 
 	// ========== ATTRIBUTE TESTS ==========
@@ -123,10 +252,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div class="container" id="main">Content</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Static attributes:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div class="container" id="main">Content</div>\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	test('transforms element with dynamic attribute', async ({ expect }) => {
@@ -135,10 +273,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div class={className}>Content</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Dynamic attribute:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { AttributePart } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>Content</div>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "class",
+			    "strings": ["", ""],
+			    "ctor": AttributePart
+			  }]
+			};
+			const className = 'dynamic-class';
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [className]
+			};
+		`));
 	});
 
 	test('transforms element with boolean attribute (arrow function)', async ({ expect }) => {
@@ -147,10 +302,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <button disabled={bool => isDisabled}>Click me</button>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Boolean attribute (arrow):', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { BooleanPart } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<button>Click me</button>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "disabled",
+			    "strings": ["", ""],
+			    "ctor": BooleanPart
+			  }]
+			};
+			const isDisabled = true;
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [isDisabled]
+			};
+		`));
 	});
 
 	test('transforms element with boolean attribute (as.bool)', async ({ expect }) => {
@@ -159,10 +331,26 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <button disabled={as.bool(isDisabled)}>Click me</button>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Boolean attribute (as.bool):', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		expect(code).toBe(dedent(`
+			import { BooleanPart } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<button>Click me</button>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "disabled",
+			    "strings": ["", ""],
+			    "ctor": BooleanPart
+			  }]
+			};
+			const isDisabled = true;
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [isDisabled]
+			};
+		`));
 	});
 
 	test('transforms element with property assignment (arrow function)', async ({ expect }) => {
@@ -171,10 +359,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <input value={prop => value} />;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Property assignment (arrow):', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { PropertyPart } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<input></input>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "value",
+			    "strings": ["", ""],
+			    "ctor": PropertyPart
+			  }]
+			};
+			const value = 'test-value';
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [value]
+			};
+		`));
 	});
 
 	test('transforms element with property assignment (as.prop)', async ({ expect }) => {
@@ -183,10 +388,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <input value={as.prop(value)} />;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Property assignment (as.prop):', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { PropertyPart } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<input></input>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "value",
+			    "strings": ["", ""],
+			    "ctor": PropertyPart
+			  }]
+			};
+			const value = 'test-value';
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [value]
+			};
+		`));
 	});
 
 	test('transforms element with mixed attribute types', async ({ expect }) => {
@@ -204,10 +426,43 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Mixed attributes:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { PropertyPart } from "jsx-lit";
+			import { BooleanPart } from "jsx-lit";
+			import { AttributePart } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<input type="text"></input>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "class",
+			    "strings": ["", ""],
+			    "ctor": AttributePart
+			  }, {
+			    "type": 1,
+			    "index": 0,
+			    "name": "disabled",
+			    "strings": ["", ""],
+			    "ctor": BooleanPart
+			  }, {
+			    "type": 1,
+			    "index": 0,
+			    "name": "value",
+			    "strings": ["", ""],
+			    "ctor": PropertyPart
+			  }]
+			};
+			const className = 'dynamic';
+			const isDisabled = true;
+			const value = 'input-value';
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [className, isDisabled, value]
+			};
+		`));
 	});
 
 	// ========== CUSTOM ELEMENT TESTS (.tag) ==========
@@ -218,10 +473,17 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <Button.tag>Click me</Button.tag>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Simple custom element:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Button = {
+			  tag: 'custom-button'
+			};
+			const __$Button = __$literalMap.get(Button.tag);
+			const template = htmlStatic\`<\${__$Button}>Click me</\${__$Button}>\`;
+		`));
 	});
 
 	test('transforms custom element with attributes', async ({ expect }) => {
@@ -230,10 +492,17 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <Button.tag type="submit" variant="primary">Submit</Button.tag>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Custom element with attributes:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Button = {
+			  tag: 'custom-button'
+			};
+			const __$Button = __$literalMap.get(Button.tag);
+			const template = htmlStatic\`<\${__$Button} type="submit" variant="primary">Submit</\${__$Button}>\`;
+		`));
 	});
 
 	test('transforms custom element with dynamic attributes', async ({ expect }) => {
@@ -243,10 +512,18 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <Button.tag variant={variant}>Dynamic</Button.tag>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Custom element dynamic attrs:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Button = {
+			  tag: 'custom-button'
+			};
+			const __$Button = __$literalMap.get(Button.tag);
+			const variant = 'primary';
+			const template = htmlStatic\`<\${__$Button} variant=\${variant}>Dynamic</\${__$Button}>\`;
+		`));
 	});
 
 	test('transforms self-closing custom element', async ({ expect }) => {
@@ -255,10 +532,17 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <Icon.tag name="star" />;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Self-closing custom element:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Icon = {
+			  tag: 'custom-icon'
+			};
+			const __$Icon = __$literalMap.get(Icon.tag);
+			const template = htmlStatic\`<\${__$Icon} name="star"></\${__$Icon}>\`;
+		`));
 	});
 
 	// ========== SVG & MATHML TESTS ==========
@@ -268,10 +552,12 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <circle cx="50" cy="50" r="40" />;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Standalone SVG:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { svg } from "lit-html/directives/svg.js";
+			const template = svg\`<circle cx="50" cy="50" r="40"></circle>\`;
+		`));
 	});
 
 	test('transforms SVG with expressions', async ({ expect }) => {
@@ -280,10 +566,13 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <circle cx="50" cy="50" r={radius} />;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('SVG with expressions:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { svg } from "lit-html/directives/svg.js";
+			const radius = 40;
+			const template = svg\`<circle cx="50" cy="50" r=\${radius}></circle>\`;
+		`));
 	});
 
 	test('transforms SVG wrapped in HTML', async ({ expect }) => {
@@ -297,10 +586,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('SVG in HTML:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div><svg width="100" height="100"><circle cx="50" cy="50" r="40"></circle></svg></div>\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	test('transforms standalone MathML element', async ({ expect }) => {
@@ -308,10 +606,12 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <mi>x</mi>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Standalone MathML:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { mathml } from "lit-html/directives/mathml.js";
+			const template = mathml\`<mi>x</mi>\`;
+		`));
 	});
 
 	test('transforms complex MathML expression', async ({ expect }) => {
@@ -325,10 +625,12 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Complex MathML:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { mathml } from "lit-html/directives/mathml.js";
+			const template = mathml\`<mrow><mi>x</mi><mo>+</mo><mi>y</mi></mrow>\`;
+		`));
 	});
 
 	test('transforms MathML wrapped in HTML', async ({ expect }) => {
@@ -346,10 +648,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('MathML in HTML:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div><math><mrow><mi>x</mi><mo>+</mo><mi>y</mi></mrow></math></div>\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	// ========== FUNCTION COMPONENT TESTS ==========
@@ -359,10 +670,12 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <MyComponent />;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Function component no props:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+
+		expect(code).toBe(dedent(`
+			const template = MyComponent({});
+		`));
 	});
 
 	test('transforms function component with props', async ({ expect }) => {
@@ -370,10 +683,14 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <MyComponent title="Hello" count={42} />;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Function component with props:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			const template = MyComponent({
+			  title: "Hello",
+			  count: 42
+			});
+		`));
 	});
 
 	test('transforms function component with single child', async ({ expect }) => {
@@ -385,10 +702,20 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Function component single child:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			const _temp = {
+			  "h": __$t\`<div>Single child</div>\`,
+			  "parts": []
+			};
+			const template = MyComponent({
+			  children: {
+			    "_$litType$": _temp,
+			    "values": []
+			  }
+			});
+		`));
 	});
 
 	test('transforms function component with multiple children', async ({ expect }) => {
@@ -403,10 +730,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Function component multiple children:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			const _temp2 = {
+			  "h": __$t\`<span>Second child</span>\`,
+			  "parts": []
+			};
+			const _temp = {
+			  "h": __$t\`<div>First child</div>\`,
+			  "parts": []
+			};
+			const template = MyComponent({
+			  children: [{
+			    "_$litType$": _temp,
+			    "values": []
+			  }, expression, {
+			    "_$litType$": _temp2,
+			    "values": []
+			  }, "Text content"]
+			});
+		`));
 	});
 
 	test('transforms function component with expression child', async ({ expect }) => {
@@ -419,10 +763,32 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Function component expression child:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { AttributePart } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<li><?></li>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "key",
+			    "strings": ["", ""],
+			    "ctor": AttributePart
+			  }, {
+			    "type": 2,
+			    "index": 1
+			  }]
+			};
+			const items = ['a', 'b', 'c'];
+			const template = List({
+			  children: items.map(item => ({
+			    "_$litType$": _temp,
+			    "values": [item, item]
+			  }))
+			});
+		`));
 	});
 
 	// ========== DIRECTIVE TESTS ==========
@@ -432,10 +798,22 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div directive={myDirective()}>Content</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Single directive:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>Content</div>\`,
+			  "parts": [{
+			    "type": 6,
+			    "index": 0
+			  }]
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [myDirective()]
+			};
+		`));
 	});
 
 	test('transforms element with multiple directives', async ({ expect }) => {
@@ -443,10 +821,25 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div directive={[directive1(), directive2()]}>Content</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Multiple directives:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>Content</div>\`,
+			  "parts": [{
+			    "type": 6,
+			    "index": 0
+			  }, {
+			    "type": 6,
+			    "index": 0
+			  }]
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [directive1(), directive2()]
+			};
+		`));
 	});
 
 	test('transforms element with ref directive', async ({ expect }) => {
@@ -454,10 +847,23 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div ref={this.elementRef}>Content</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Ref directive:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { ref } from "lit-html/directives/ref.js";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>Content</div>\`,
+			  "parts": [{
+			    "type": 6,
+			    "index": 0
+			  }]
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [ref(this.elementRef)]
+			};
+		`));
 	});
 
 	// ========== SPREAD ATTRIBUTES ==========
@@ -468,10 +874,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div {...props}>Content</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Spread attributes:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$rest } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>Content</div>\`,
+			  "parts": [{
+			    "type": 6,
+			    "index": 0
+			  }]
+			};
+			const props = {
+			  class: 'container',
+			  id: 'main'
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [__$rest(props)]
+			};
+		`));
 	});
 
 	test('transforms custom element with spread attributes', async ({ expect }) => {
@@ -481,10 +904,22 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <Button.tag {...props}>Submit</Button.tag>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Custom element spread:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$rest } from "jsx-lit";
+			import { __$literalMap } from "jsx-lit";
+			const Button = {
+			  tag: 'custom-button'
+			};
+			const __$Button = __$literalMap.get(Button.tag);
+			const props = {
+			  variant: 'primary',
+			  size: 'large'
+			};
+			const template = htmlStatic\`<\${__$Button} \${__$rest(props)}>Submit</\${__$Button}>\`;
+		`));
 	});
 
 	test('transforms element with mixed spread and regular attributes', async ({ expect }) => {
@@ -493,10 +928,26 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div id="specific" {...props} data-test="value">Content</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Mixed spread attributes:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$rest } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div id="specific" data-test="value">Content</div>\`,
+			  "parts": [{
+			    "type": 6,
+			    "index": 0
+			  }]
+			};
+			const props = {
+			  class: 'base'
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [__$rest(props)]
+			};
+		`));
 	});
 
 	// ========== NESTING & COMBINATION TESTS ==========
@@ -515,10 +966,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Nested elements:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div><header><h1>Title</h1></header><main><p>Content</p></main></div>\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	test('transforms compiled template with standard template child', async ({ expect }) => {
@@ -531,10 +991,17 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Compiled with standard child:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Element = {
+			  tag: 'custom-element'
+			};
+			const __$Element = __$literalMap.get(Element.tag);
+			const template = htmlStatic\`<div><\${__$Element}>Nested content</\${__$Element}></div>\`;
+		`));
 	});
 
 	test('transforms standard template with compiled template child', async ({ expect }) => {
@@ -547,10 +1014,17 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Standard with compiled child:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Element = {
+			  tag: 'custom-element'
+			};
+			const __$Element = __$literalMap.get(Element.tag);
+			const template = htmlStatic\`<\${__$Element}><div>Regular content</\${__$Element}></\${__$Element}>\`;
+		`));
 	});
 
 	test('transforms fragment with mixed content types', async ({ expect }) => {
@@ -565,10 +1039,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Fragment mixed content:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Element = {
+			  tag: 'custom-element'
+			};
+			const __$Element = __$literalMap.get(Element.tag);
+			const template = htmlStatic\`<div>Compiled content</div><\${__$Element}>Standard content</\${__$Element}>\${MyComponent({
+			  children: "Function component"
+			})}\`;
+		`));
 	});
 
 	test('transforms deeply nested mixed templates', async ({ expect }) => {
@@ -590,10 +1073,23 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Deeply nested mixed:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Card = {
+			  tag: 'ui-card'
+			};
+			const __$Card = __$literalMap.get(Card.tag);
+			const Button = {
+			  tag: 'ui-button'
+			};
+			const __$Button = __$literalMap.get(Button.tag);
+			const template = htmlStatic\`<div class="container"><\${__$Card} title="Card Title"><div class="content"><p>Some text content</\${__$Card}><\${__$Button} variant="primary">\${Icon({
+			  name: "save"
+			})}Save</\${__$Button}></\${__$Card}></\${__$Card}></div>\`;
+		`));
 	});
 
 	// ========== EDGE CASES & SPECIAL SCENARIOS ==========
@@ -603,10 +1099,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div>   </div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Whitespace only:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div></div>\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	test('transforms element with mixed text and expressions', async ({ expect }) => {
@@ -616,10 +1121,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div>Hello {name}, you are {age} years old!</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Mixed text expressions:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>Hello<?>, you are<?>years old!</div>\`,
+			  "parts": [{
+			    "type": 2,
+			    "index": 1
+			  }, {
+			    "type": 2,
+			    "index": 1
+			  }]
+			};
+			const name = 'John';
+			const age = 30;
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [name, age]
+			};
+		`));
 	});
 
 	test('transforms element with complex nested expressions', async ({ expect }) => {
@@ -628,10 +1150,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <div>Welcome, {user.profile?.name || 'Guest'}!</div>;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Complex nested expressions:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>Welcome,<?>!</div>\`,
+			  "parts": [{
+			    "type": 2,
+			    "index": 1
+			  }]
+			};
+			const user = {
+			  profile: {
+			    name: 'John'
+			  }
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [user.profile?.name || 'Guest']
+			};
+		`));
 	});
 
 	test('transforms element with function call expressions', async ({ expect }) => {
@@ -644,10 +1183,25 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Function call expressions:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div><span><?></span><span><?></span></div>\`,
+			  "parts": [{
+			    "type": 2,
+			    "index": 2
+			  }, {
+			    "type": 2,
+			    "index": 2
+			  }]
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [formatDate(new Date()), calculateTotal(items)]
+			};
+		`));
 	});
 
 	test('transforms fragment as root element', async ({ expect }) => {
@@ -660,10 +1214,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Fragment as root:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div>First</div><div>Second</div>\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	test('transforms element with boolean attribute shorthand', async ({ expect }) => {
@@ -671,10 +1234,19 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		const template = <input type="checkbox" checked />;
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Boolean shorthand:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<input type="checkbox" checked></input>\`,
+			  "parts": []
+			};
+			const template = {
+			  "_$litType$": _temp,
+			  "values": []
+			};
+		`));
 	});
 
 	// ========== COMPLEX REAL-WORLD SCENARIOS ==========
@@ -716,10 +1288,24 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Complex form:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const FormField = {
+			  tag: 'form-field'
+			};
+			const __$FormField = __$literalMap.get(FormField.tag);
+			const Button = {
+			  tag: 'custom-button'
+			};
+			const __$Button = __$literalMap.get(Button.tag);
+			const isSubmitting = false;
+			const template = htmlStatic\`<form onSubmit=\${handleSubmit}><\${__$FormField} label="Username" required><input type="text" value=\${formData.username} onChange=\${handleChange} ?disabled=\${isSubmitting}></\${__$FormField}></\${__$FormField}><\${__$FormField} label="Email"><input type="email" value=\${formData.email} onChange=\${handleChange}></\${__$FormField}></\${__$FormField}><div class="form-actions"><\${__$Button} type="submit" variant="primary" ?disabled=\${isSubmitting} \${loading(isSubmitting)}>\${isSubmitting ? 'Submitting...' : 'Submit'}</\${__$Button}>\${ValidationMessages({
+			  errors: errors
+			})}</div></form>\`;
+		`));
 	});
 
 	test('transforms data table with dynamic content', async ({ expect }) => {
@@ -760,10 +1346,39 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Data table:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			import { __$t } from "jsx-lit";
+			const _temp = {
+			  "h": __$t\`<div class="table-container"><table><thead><tr><th>Name</th><th>Age</th><th>Actions</th></tr></thead><tbody><?></tbody></table></div>\`,
+			  "parts": [{
+			    "type": 2,
+			    "index": 3
+			  }]
+			};
+			const TableRow = {
+			  tag: 'table-row'
+			};
+			const __$TableRow = __$literalMap.get(TableRow.tag);
+			const TableCell = {
+			  tag: 'table-cell'
+			};
+			const __$TableCell = __$literalMap.get(TableCell.tag);
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [users.map(user => htmlStatic\`<\${__$TableRow} key=\${user.id}><\${__$TableCell}>\${user.name}</\${__$TableCell}><\${__$TableCell}>\${user.age}</\${__$TableCell}><\${__$TableCell}>\${ActionButton({
+			    onClick: prop => () => editUser(user.id),
+			    icon: "edit"
+			  })}\${ActionButton({
+			    onClick: prop => () => deleteUser(user.id),
+			    icon: "delete",
+			    variant: "danger"
+			  })}</\${__$TableCell}></\${__$TableRow}>\`)]
+			};
+		`));
 	});
 
 	test('transforms dashboard layout with components and templates', async ({ expect }) => {
@@ -816,10 +1431,42 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Dashboard layout:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Card = {
+			  tag: 'ui-card'
+			};
+			const __$Card = __$literalMap.get(Card.tag);
+			const Grid = {
+			  tag: 'ui-grid'
+			};
+			const __$Grid = __$literalMap.get(Grid.tag);
+			const Sidebar = {
+			  tag: 'ui-sidebar'
+			};
+			const __$Sidebar = __$literalMap.get(Sidebar.tag);
+			const template = htmlStatic\`<div class="dashboard"><header class="dashboard-header"><h1>Dashboard</h1>\${UserMenu({
+			  user: currentUser
+			})}</header><div class="dashboard-body"><\${__$Sidebar} position="left">\${NavigationMenu({
+			  items: menuItems
+			})}</\${__$Sidebar}><main class="dashboard-content"><\${__$Grid} cols="2" gap="large"><\${__$Card} title="Statistics" span="2">\${StatsChart({
+			  data: chartData,
+			  type: "line",
+			  directive: [resize()]
+			})}</\${__$Card}><\${__$Card} title="Recent Activity">\${ActivityFeed({
+			  items: activities,
+			  maxItems: 10
+			})}</\${__$Card}><\${__$Card} title="Quick Actions"><div class="action-grid">\${quickActions.map(action => ActionCard({
+			  key: action.id,
+			  title: action.title,
+			  icon: action.icon,
+			  onClick: action.handler,
+			  disabled: bool => action.disabled
+			}))}</\${__$Card}></\${__$Card}></\${__$Grid}></main></div></div>\`;
+		`));
 	});
 
 	test('transforms modal with portal and dynamic content', async ({ expect }) => {
@@ -874,9 +1521,27 @@ describe('Comprehensive JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const result = await babel.transformAsync(source, getOpts());
-		const code = result?.code;
-		// TODO: Add expected output
-		console.log('Modal with portal:', code);
+		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "jsx-lit";
+			const Modal = {
+			  tag: 'ui-modal'
+			};
+			const __$Modal = __$literalMap.get(Modal.tag);
+			const Portal = {
+			  tag: 'ui-portal'
+			};
+			const __$Portal = __$literalMap.get(Portal.tag);
+			const Button = {
+			  tag: 'ui-button'
+			};
+			const __$Button = __$literalMap.get(Button.tag);
+			const template = htmlStatic\`<\${__$Portal} target="body"><\${__$Modal} ?open=\${isOpen} onClose=\${handleClose} \${trapFocus()} \${preventScroll()} \${clickOutside(handleClose)}><div class="modal-header"><h2>\${title}</\${__$Modal}><\${__$Button} variant="ghost" size="small" onClick=\${handleClose} aria-label="Close">\${CloseIcon({})}</\${__$Button}></\${__$Modal}><div class="modal-body">\${content || DefaultContent({
+			  type: contentType,
+			  data: contentData
+			})}</\${__$Modal}><div class="modal-footer">\${actions.map(action => htmlStatic\`<\${__$Button} key=\${action.id} variant=\${action.variant || 'secondary'} onClick=\${action.handler} ?disabled=\${action.disabled}>\${action.label}</\${__$Button}>\`)}</\${__$Modal}></\${__$Modal}></\${__$Portal}>\`;
+		`));
 	});
 });
