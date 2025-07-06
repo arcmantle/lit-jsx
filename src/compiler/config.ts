@@ -57,11 +57,12 @@ export const SOURCES = {
 	CLASS_MAP_ALT:     'lit/directives/class-map.js',
 	STYLE_MAP:         'lit-html/directives/style-map.js',
 	STYLE_MAP_ALT:     'lit/directives/style-map.js',
-	REST:              'jsx-lit',
-	LITERAL_MAP:       'jsx-lit',
-	JSX_LIT:           'jsx-lit',
+	REST:              '@arcmantle/lit-jsx',
+	LITERAL_MAP:       '@arcmantle/lit-jsx',
+	JSX_LIT:           '@arcmantle/lit-jsx',
 } as const;
 export const ERROR_MESSAGES = {
+	INVALID_INITIAL_ELEMENT:    'Invalid initial element found. The first element must be a JSX element.',
 	NO_PROGRAM_FOUND:           'No program found for JSX transformation.',
 	INVALID_OPENING_TAG:        'Invalid opening tag found.',
 	EMPTY_JSX_EXPRESSION:       'Empty JSX expression found.',

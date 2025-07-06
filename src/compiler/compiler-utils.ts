@@ -62,14 +62,33 @@ export class Ensure {
 			});
 		});
 
-		// If not found, add the import
+		// If import name not found, check if we can append to existing import source
 		if (!hasImport) {
-			const importDeclaration = createImport();
-			const programPath = path.findParent(p => t.isProgram(p.node)) as NodePath<t.Program>;
+			// Find existing import declaration with matching source that is not type-only
+			const existingImport = program.body.find(node => {
+				return t.isImportDeclaration(node)
+					&& importSource(node.source.value)
+					&& node.importKind !== 'type';
+			}) as t.ImportDeclaration | undefined;
 
-			// Insert at the top of the file
-			const [ insertedPath ] = programPath.unshiftContainer('body', importDeclaration);
-			programPath.scope.registerDeclaration(insertedPath);
+			if (existingImport) {
+				// Append to existing import
+				const newImportDeclaration = createImport();
+				const newSpecifiers = newImportDeclaration.specifiers.filter(spec =>
+					t.isImportSpecifier(spec));
+
+				// Add new specifiers to existing import
+				existingImport.specifiers.push(...newSpecifiers);
+			}
+			else {
+				// Create new import declaration
+				const importDeclaration = createImport();
+				const programPath = path.findParent(p => t.isProgram(p.node)) as NodePath<t.Program>;
+
+				// Insert at the top of the file
+				const [ insertedPath ] = programPath.unshiftContainer('body', importDeclaration);
+				programPath.scope.registerDeclaration(insertedPath);
+			}
 		}
 	}
 

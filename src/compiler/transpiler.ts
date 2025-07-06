@@ -104,12 +104,11 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 		if (isJSXFunctionElementComponent(context.tagName)) {
 			// Process attributes and children into a props object
 			if (!context.isInitialElement)
-				this.functionalComponent(context);
+				return this.functionalComponent(context);
 
 			// If this is the initial element, this should not happen.
 			// and it should instead have been processed as a single expression.
-
-			return;
+			throw new Error(ERROR_MESSAGES.INVALID_INITIAL_ELEMENT);
 		}
 
 		this.openingTag(context);
@@ -418,12 +417,11 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 		if (isJSXFunctionElementComponent(context.tagName)) {
 			// Process attributes and children into a props object
 			if (!context.isInitialElement)
-				this.functionalComponent(context);
+				return this.functionalComponent(context);
 
 			// If this is the initial element, this should not happen.
 			// and it should instead have been processed as a single expression.
-
-			return;
+			throw new Error(ERROR_MESSAGES.INVALID_INITIAL_ELEMENT);
 		}
 
 		this.openingTag(context);

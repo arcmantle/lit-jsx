@@ -80,7 +80,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`\`,
 			  "parts": []
@@ -100,7 +100,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Static text content</div>\`,
 			  "parts": []
@@ -120,7 +120,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<input type="text"></input>\`,
 			  "parts": []
@@ -143,7 +143,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Hello<?></div>\`,
 			  "parts": [{
@@ -169,7 +169,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div><?><?></div>\`,
 			  "parts": [{
@@ -198,7 +198,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>User:<?>(<?>years old)</div>\`,
 			  "parts": [{
@@ -229,7 +229,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div><?></div>\`,
 			  "parts": [{
@@ -255,7 +255,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div class="container" id="main">Content</div>\`,
 			  "parts": []
@@ -276,8 +276,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { AttributePart } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, AttributePart } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Content</div>\`,
 			  "parts": [{
@@ -305,8 +304,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { BooleanPart } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, BooleanPart } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<button>Click me</button>\`,
 			  "parts": [{
@@ -332,9 +330,9 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`;
 
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
+
 		expect(code).toBe(dedent(`
-			import { BooleanPart } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, BooleanPart } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<button>Click me</button>\`,
 			  "parts": [{
@@ -362,8 +360,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { PropertyPart } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, PropertyPart } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<input></input>\`,
 			  "parts": [{
@@ -391,8 +388,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { PropertyPart } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, PropertyPart } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<input></input>\`,
 			  "parts": [{
@@ -429,10 +425,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { PropertyPart } from "jsx-lit";
-			import { BooleanPart } from "jsx-lit";
-			import { AttributePart } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, AttributePart, BooleanPart, PropertyPart } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<input type="text"></input>\`,
 			  "parts": [{
@@ -477,7 +470,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Button = {
 			  tag: 'custom-button'
 			};
@@ -496,7 +489,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Button = {
 			  tag: 'custom-button'
 			};
@@ -516,7 +509,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Button = {
 			  tag: 'custom-button'
 			};
@@ -536,7 +529,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Icon = {
 			  tag: 'custom-icon'
 			};
@@ -589,7 +582,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div><svg width="100" height="100"><circle cx="50" cy="50" r="40"></circle></svg></div>\`,
 			  "parts": []
@@ -651,7 +644,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div><math><mrow><mi>x</mi><mo>+</mo><mi>y</mi></mrow></math></div>\`,
 			  "parts": []
@@ -766,8 +759,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { AttributePart } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, AttributePart } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<li><?></li>\`,
 			  "parts": [{
@@ -801,7 +793,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Content</div>\`,
 			  "parts": [{
@@ -824,7 +816,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Content</div>\`,
 			  "parts": [{
@@ -851,7 +843,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { ref } from "lit-html/directives/ref.js";
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Content</div>\`,
 			  "parts": [{
@@ -877,8 +869,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$rest } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, __$rest } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Content</div>\`,
 			  "parts": [{
@@ -908,8 +899,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$rest } from "jsx-lit";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap, __$rest } from "@arcmantle/lit-jsx";
 			const Button = {
 			  tag: 'custom-button'
 			};
@@ -931,8 +921,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$rest } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, __$rest } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div id="specific" data-test="value">Content</div>\`,
 			  "parts": [{
@@ -969,7 +958,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div><header><h1>Title</h1></header><main><p>Content</p></main></div>\`,
 			  "parts": []
@@ -995,7 +984,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Element = {
 			  tag: 'custom-element'
 			};
@@ -1018,7 +1007,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Element = {
 			  tag: 'custom-element'
 			};
@@ -1043,7 +1032,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Element = {
 			  tag: 'custom-element'
 			};
@@ -1077,7 +1066,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Card = {
 			  tag: 'ui-card'
 			};
@@ -1102,7 +1091,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div></div>\`,
 			  "parts": []
@@ -1124,7 +1113,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Hello<?>, you are<?>years old!</div>\`,
 			  "parts": [{
@@ -1153,7 +1142,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Welcome,<?>!</div>\`,
 			  "parts": [{
@@ -1186,7 +1175,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div><span><?></span><span><?></span></div>\`,
 			  "parts": [{
@@ -1217,7 +1206,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>First</div><div>Second</div>\`,
 			  "parts": []
@@ -1237,7 +1226,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "jsx-lit";
+			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<input type="checkbox" checked></input>\`,
 			  "parts": []
@@ -1292,7 +1281,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const FormField = {
 			  tag: 'form-field'
 			};
@@ -1350,8 +1339,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
-			import { __$t } from "jsx-lit";
+			import { __$t, __$literalMap } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div class="table-container"><table><thead><tr><th>Name</th><th>Age</th><th>Actions</th></tr></thead><tbody><?></tbody></table></div>\`,
 			  "parts": [{
@@ -1435,7 +1423,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Card = {
 			  tag: 'ui-card'
 			};
@@ -1525,7 +1513,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "jsx-lit";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Modal = {
 			  tag: 'ui-modal'
 			};
