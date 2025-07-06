@@ -464,7 +464,7 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 			}
 			else if (t.isJSXExpressionContainer(child)) {
 				if (t.isJSXEmptyExpression(child.expression))
-					throw new Error(ERROR_MESSAGES.EMPTY_EXPRESSION);
+					continue;
 
 				context.builder.addText('<?>');
 				context.builder.addValue(child.expression);

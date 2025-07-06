@@ -26,7 +26,10 @@
  */
 export const toJSX = <T extends { new(...args: any): any; tagName: string; }>(
 	element: T,
-): (props: JSX.JSXProps<InstanceType<T>>) => string => {
+): ToJSX<InstanceType<T>> => {
+	if (!element.tagName)
+		throw new Error('Element must have a static tagName property');
+
 	queueMicrotask(() => {
 		if ('register' in element && typeof element.register === 'function')
 			element.register();
@@ -36,6 +39,8 @@ export const toJSX = <T extends { new(...args: any): any; tagName: string; }>(
 
 	return element.tagName as any;
 };
+
+export type ToJSX<T extends object> = (props: JSX.JSXProps<T>) => string;
 
 
 /**
