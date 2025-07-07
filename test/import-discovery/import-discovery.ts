@@ -1,4 +1,4 @@
-import { type ToJSX, toJSX } from '../../src/utils.ts';
+import { type ToComponent, toComponent } from '../../src/utils.ts';
 
 
 export class DiscoveryTestCmp extends HTMLElement {
@@ -15,7 +15,7 @@ export class DiscoveryTestCmp extends HTMLElement {
 
 }
 
-export const DiscoveryTest: ToJSX<DiscoveryTestCmp> = toJSX(DiscoveryTestCmp);
+export const DiscoveryTest: ToComponent<DiscoveryTestCmp> = toComponent(DiscoveryTestCmp);
 
 
 export function RegularFunction(): string {

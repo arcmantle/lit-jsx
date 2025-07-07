@@ -92,7 +92,7 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 
 		context.tagName = getJSXElementName(context.path.node);
 
-		if (isJSXCustomElementComponent(context.tagName)) {
+		if (isJSXCustomElementComponent(context.path)) {
 			this.openingTag(context);
 			this.attributes(context);
 			this.children(context);
@@ -101,7 +101,7 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 			return;
 		}
 
-		if (isJSXFunctionElementComponent(context.tagName)) {
+		if (isJSXFunctionElementComponent(context.path)) {
 			// Process attributes and children into a props object
 			if (!context.isInitialElement)
 				return this.functionalComponent(context);
@@ -118,7 +118,7 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 	}
 
 	override openingTag(context: TemplateContext): void {
-		if (isJSXCustomElementComponent(context.tagName)) {
+		if (isJSXCustomElementComponent(context.path)) {
 			const literalIdentifier = Ensure.componentLiteral(
 				context.tagName,
 				COMPONENT_LITERAL_PREFIX + context.tagName,
@@ -414,7 +414,7 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 
 		context.tagName = getJSXElementName(context.path.node);
 
-		if (isJSXFunctionElementComponent(context.tagName)) {
+		if (isJSXFunctionElementComponent(context.path)) {
 			// Process attributes and children into a props object
 			if (!context.isInitialElement)
 				return this.functionalComponent(context);

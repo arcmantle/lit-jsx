@@ -1,4 +1,4 @@
-import { type ToJSX, toJSX } from '../../src/utils.ts';
+import { type ToComponent, toComponent } from '../../src/utils.ts';
 
 
 class MyActualComponent extends HTMLElement {
@@ -15,4 +15,4 @@ class MyActualComponent extends HTMLElement {
 
 }
 
-export const ActualElement: ToJSX<MyActualComponent> = toJSX(MyActualComponent);
+export const ActualElement: ToComponent<MyActualComponent> = toComponent(MyActualComponent);

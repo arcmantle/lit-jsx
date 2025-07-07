@@ -1,13 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname /*resolve as nodeResolve*/ } from 'node:path';
 
 import * as babel from '@babel/core';
-import traverse, { Binding, Hub, NodePath, Scope } from '@babel/traverse';
+import type { Binding, NodePath,  Scope } from '@babel/traverse';
 import * as t from '@babel/types';
+import resolve from 'oxc-resolver';
 
-
-// Cache for parsed files to avoid re-parsing
-const fileCache: Map<string, t.File> = new Map();
+import { traverse } from './babel-traverse.ts';
+import { getPathFilename, isComponent } from './compiler-utils.ts';
 
 
 export type BabelPlugins = NonNullable<NonNullable<babel.TransformOptions['parserOpts']>['plugins']>;
@@ -22,21 +22,35 @@ export interface ElementDefinition {
 }
 
 
+// Cache for parsed files to avoid re-parsing
+const fileCache: Map<string, t.File> = new Map();
+
+let debuggingEnabled = false;
+
+
 // Helper function to find the definition of a JSX element
-export function findElementDefinition(path: NodePath<t.JSXOpeningElement>): ElementDefinition {
+export function findElementDefinition(
+	path: NodePath<t.JSXOpeningElement>,
+	enableDebugging?: boolean,
+): ElementDefinition {
+	if (enableDebugging)
+		debuggingEnabled = true;
+
+	fileCache.clear(); // Clear cache for fresh discovery
+
 	const elementName = path.node.name;
-
-	const hub = path.hub as Hub & { file: { opts: { filename: string; }; }; };
-
-	const currentFileName = hub.file.opts.filename;
+	const currentFileName = getPathFilename(path);
 
 	// Only handle JSXIdentifier (not JSXMemberExpression or JSXNamespacedName)
 	if (!t.isJSXIdentifier(elementName))
 		return { type: 'unknown' };
 
 	const elementNameString = elementName.name;
+	if (!isComponent(elementNameString))
+		return { type: 'unknown' };
 
-	//console.log('Tracing element:', elementNameString);
+	if (debuggingEnabled)
+		console.log('Tracing element:', elementNameString);
 
 	// Start tracing with the current file context
 	return traceElementDefinition(elementNameString, path.scope, currentFileName);
@@ -59,12 +73,14 @@ function traceElementDefinition(
 	const binding = scope.getBinding(elementName);
 
 	if (!binding) {
-		//console.log('No binding found for:', elementName);
+		if (debuggingEnabled)
+			console.log('No binding found for:', elementName);
 
 		return { type: 'unknown' };
 	}
 
-	//console.log('Binding kind:', binding.kind, 'type:', binding.path.type);
+	if (debuggingEnabled)
+		console.log('Binding kind:', binding.kind, 'type:', binding.path.type);
 
 	// Handle imports
 	if (binding.kind === 'module' && t.isImportSpecifier(binding.path.node))
@@ -79,6 +95,7 @@ function traceElementDefinition(
 	return { type: 'unknown' };
 }
 
+
 function traceImport(
 	binding: Binding,
 	currentFileName: string,
@@ -92,16 +109,26 @@ function traceImport(
 
 	const importSource = importDeclaration.source.value;
 	const currentDir = dirname(currentFileName);
-	const resolvedPath = resolve(currentDir, importSource);
+	//const resolvedPath2 = nodeResolve(currentDir, importSource);
 
-	//console.log('Tracing import from:', importSource);
-	//console.log('Resolved to:', resolvedPath);
+	const resolvedResult = resolve.sync(currentDir, importSource);
+	const resolvedPath = resolvedResult.path!;
+
+	console.log(resolvedResult);
+
+	if (debuggingEnabled) {
+		console.log('Tracing import from:', importSource);
+		console.log('Resolved to:', resolvedPath);
+	}
 
 	// Use cached parsing
 	const ast = getOrParseFile(resolvedPath);
-	if (!ast)
-		return { type: 'unknown' };
+	if (!ast) {
+		if (debuggingEnabled)
+			console.log('Failed to parse imported file:', resolvedPath);
 
+		return { type: 'unknown' };
+	}
 
 	let result: ElementDefinition = { type: 'unknown' };
 
@@ -110,15 +137,23 @@ function traceImport(
 			// First try to find a local binding (normal export)
 			const localBinding = programPath.scope.getBinding(elementName);
 
+			// TODO, we need to account for things having been minified and renamed
+			// like `export { X as Y } from './file'`
+			// As well as the toComponent/toTag calls having been renamed.
+
 			if (localBinding) {
-				//console.log('Found local binding in imported file');
+				if (debuggingEnabled)
+					console.log('Found local binding in imported file');
+
 				result = traceElementDefinition(elementName, programPath.scope, resolvedPath, visitedFiles);
 
 				return;
 			}
 
+			if (debuggingEnabled)
+				console.log('No local binding, checking for re-exports...');
+
 			// If no local binding found, check for re-exports
-			//console.log('No local binding, checking for re-exports...');
 			result = checkForReExports(programPath, elementName, resolvedPath, visitedFiles);
 		},
 	});
@@ -126,12 +161,14 @@ function traceImport(
 	return result;
 }
 
+
 function traceLocalVariable(
 	binding: Binding,
 	currentFileName: string,
 	visitedFiles: Set<string>,
 ): ElementDefinition {
-	//console.log('Tracing local variable:', binding.kind, binding.path.type);
+	if (debuggingEnabled)
+		console.log('Tracing local variable:', binding.kind, binding.path.type);
 
 	// Check if it's a variable declarator (const/let/var)
 	if (t.isVariableDeclarator(binding.path.node)) {
@@ -142,7 +179,9 @@ function traceLocalVariable(
 			const callExpr = declarator.init;
 
 			// Check if it's a toJSX call
-			if (t.isIdentifier(callExpr.callee) && callExpr.callee.name === 'toJSX') {
+			if (t.isIdentifier(callExpr.callee)
+				&& (callExpr.callee.name === 'toComponent' || callExpr.callee.name === 'toTag')
+			) {
 				return {
 					type:           'custom-element',
 					source:         currentFileName,
@@ -151,13 +190,16 @@ function traceLocalVariable(
 			}
 
 			// Could be assigned to another function call - trace that too
-			//console.log('Local variable assigned to call expression:', callExpr.callee);
+			if (debuggingEnabled)
+				console.log('Local variable assigned to call expression:', callExpr.callee);
 		}
 
 		// Check if it's assigned to an identifier (another variable)
 		if (declarator.init && t.isIdentifier(declarator.init)) {
 			const assignedIdentifier = declarator.init.name;
-			//console.log('Local variable assigned to identifier:', assignedIdentifier);
+
+			if (debuggingEnabled)
+				console.log('Local variable assigned to identifier:', assignedIdentifier);
 
 			// Recursively trace this identifier in the same scope
 			return traceElementDefinition(assignedIdentifier, binding.path.scope, currentFileName, visitedFiles);
@@ -166,6 +208,7 @@ function traceLocalVariable(
 
 	return { type: 'local-variable' };
 }
+
 
 function checkForReExports(
 	programPath: babel.NodePath<babel.types.Program>,
@@ -184,7 +227,8 @@ function checkForReExports(
 				return; // Skip if no source or specifiers
 
 			// Handle re-exports: export { X } from './file'
-			//console.log('Found re-export from:', node.source.value);
+			if (debuggingEnabled)
+				console.log('Found re-export from:', node.source.value);
 
 			for (const specifier of node.specifiers) {
 				if (!t.isExportSpecifier(specifier))
@@ -199,17 +243,24 @@ function checkForReExports(
 					continue;
 
 				const originalName = specifier.local.name;
-				//console.log(`Found re-export: ${ originalName } as ${ exportedName }`);
+
+				if (debuggingEnabled)
+					console.log(`Found re-export: ${ originalName } as ${ exportedName }`);
 
 				// Resolve and trace the re-exported file
 				const reExportSource = node.source.value;
 				const currentDir = dirname(currentFileName);
-				const resolvedPath = resolve(currentDir, reExportSource);
+				//const resolvedPath2 = nodeResolve(currentDir, reExportSource);
+
+				const resolvedResult = resolve.sync(currentDir, reExportSource);
+				const resolvedPath = resolvedResult.path!;
 
 				if (!existsSync(resolvedPath))
 					continue; // Skip if file doesn't exist
 
-				//console.log('Tracing re-export to:', resolvedPath);
+				if (debuggingEnabled)
+					console.log('Tracing re-export to:', resolvedPath);
+
 				result = traceReExport(originalName, resolvedPath, visitedFiles);
 
 				// Stop traversing once we find the match
@@ -221,6 +272,7 @@ function checkForReExports(
 	return result;
 }
 
+
 function traceReExport(
 	elementName: string,
 	filePath: string,
@@ -230,7 +282,6 @@ function traceReExport(
 	const ast = getOrParseFile(filePath);
 	if (!ast)
 		return { type: 'unknown' };
-
 
 	let result: ElementDefinition = { type: 'unknown' };
 
@@ -249,7 +300,8 @@ function traceReExport(
 function getOrParseFile(filePath: string): t.File | undefined {
 	// Check cache first
 	if (fileCache.has(filePath)) {
-		//console.log('Using cached AST for:', filePath);
+		if (debuggingEnabled)
+			console.log('Using cached AST for:', filePath);
 
 		return fileCache.get(filePath)!;
 	}
@@ -264,12 +316,19 @@ function getOrParseFile(filePath: string): t.File | undefined {
 		const ast = babel.parseSync(fileContent, {
 			filename:   filePath,
 			parserOpts: {
-				plugins: [ 'jsx', 'typescript' ] satisfies BabelPlugins,
+				plugins: [
+					'jsx',
+					'typescript',
+					'decorators',
+					'decoratorAutoAccessors',
+				] satisfies BabelPlugins,
 			},
 		});
 
 		if (ast) {
-			//console.log('Parsed and cached:', filePath);
+			if (debuggingEnabled)
+				console.log('Parsed and cached:', filePath);
+
 			fileCache.set(filePath, ast);
 
 			return ast;

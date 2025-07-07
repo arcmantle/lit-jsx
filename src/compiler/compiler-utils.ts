@@ -1,4 +1,4 @@
-import type { Binding, NodePath } from '@babel/traverse';
+import type { Binding, Hub, NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 
 import { isMathmlTag } from '../shared/mathml-tags.js';
@@ -8,6 +8,10 @@ import { COMPONENT_POSTFIX, ERROR_MESSAGES, SOURCES, VARIABLES } from './config.
 
 
 export type Values<T> = T[keyof T];
+
+
+/** Cache over JSX component functions which are toJSX defined custom elements. */
+export const customElementNameMap: Map<string, Set<string>> = new Map();
 
 
 export const isComponent = (tagName: string): boolean => {
@@ -22,6 +26,14 @@ export const getProgramFromPath = (path: NodePath): t.Program => {
 		throw new Error(ERROR_MESSAGES.NO_PROGRAM_FOUND);
 
 	return program;
+};
+
+
+export const getPathFilename = (path: NodePath): string => {
+	const hub = path.hub as Hub & { file: { opts: { filename: string; }; }; };
+	const currentFileName = hub.file.opts.filename;
+
+	return currentFileName;
 };
 
 
@@ -342,7 +354,8 @@ export class Ensure {
 						t.identifier(VARIABLES.LITERAL_MAP),
 						t.identifier('get'),
 					),
-					[ t.identifier(tagName + COMPONENT_POSTFIX) ],
+					[ t.identifier(tagName) ],
+					//[ t.identifier(tagName + COMPONENT_POSTFIX) ],
 				),
 			),
 		);
@@ -698,12 +711,26 @@ export const getJSXElementName = (node: t.JSXElement): string => {
 };
 
 
-export const isJSXCustomElementComponent = (nodeOrName: t.JSXElement | string): boolean => {
-	const tagName = typeof nodeOrName !== 'string'
-		? getJSXElementName(nodeOrName)
-		: nodeOrName;
+export const isJSXCustomElementComponent = (
+	path: NodePath<t.JSXElement | t.JSXFragment>,
+): boolean => {
+	const node = path.node;
+	// If it's a fragment, we cannot determine the tag name.
+	if (t.isJSXFragment(node))
+		return false;
+
+	const tagName: string = getJSXElementName(node);
+
+	if (!isComponent(tagName))
+		return false;
 
 	if (tagName.endsWith(COMPONENT_POSTFIX))
+		return true;
+
+	const currentFileName = getPathFilename(path);
+	const customElementSet = customElementNameMap.get(currentFileName);
+
+	if (customElementSet?.has(tagName))
 		return true;
 
 	return false;
@@ -711,20 +738,17 @@ export const isJSXCustomElementComponent = (nodeOrName: t.JSXElement | string): 
 
 
 export const isJSXFunctionElementComponent = (
-	pathOrName: NodePath<t.JSXElement | t.JSXFragment> | string,
+	path: NodePath<t.JSXElement | t.JSXFragment>,
 ): boolean => {
-	let tagName: string;
-	if (typeof pathOrName === 'string') {
-		tagName = pathOrName;
-	}
-	else {
-		const node = pathOrName.node;
-		// If it's a fragment, we cannot determine the tag name.
-		if (t.isJSXFragment(node))
-			return false;
+	const node = path.node;
+	// If it's a fragment, we cannot determine the tag name.
+	if (t.isJSXFragment(node))
+		return false;
 
-		tagName = getJSXElementName(node);
-	}
+	const tagName: string = getJSXElementName(node);
+
+	if (isJSXCustomElementComponent(path))
+		return false;
 
 	if (!isComponent(tagName))
 		return false;
@@ -749,7 +773,7 @@ export const isJSXFragmentPath = (path: NodePath): path is NodePath<t.JSXFragmen
  * @returns true if the template will be static, false otherwise
  */
 export const isJSXElementStatic = (path: NodePath<t.JSXElement | t.JSXFragment>): boolean => {
-	if (t.isJSXElement(path.node) && isJSXCustomElementComponent(path.node))
+	if (t.isJSXElement(path.node) && isJSXCustomElementComponent(path))
 		return true;
 
 	for (const childPath of path.get('children')) {

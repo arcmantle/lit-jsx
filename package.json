@@ -31,19 +31,20 @@
 	},
 	"dependencies": {
 		"@babel/core": "^7.20.12",
-		"@babel/types": "^7.27.6",
 		"@babel/plugin-syntax-jsx": "^7.18.6",
+		"@babel/traverse": "^7.27.4",
+		"@babel/types": "^7.27.6",
 		"@types/babel__core": "^7.20.5",
 		"@types/babel__traverse": "^7.20.7",
-		"@babel/traverse": "^7.27.4",
 		"csstype": "^3.1.3",
-		"validate-html-nesting": "^1.2.1",
-		"merge-anything": "^6.0.6"
+		"merge-anything": "^6.0.6",
+		"oxc-resolver": "^11.5.0",
+		"validate-html-nesting": "^1.2.1"
 	},
 	"devDependencies": {
 		"lit-html": "^3.3.0",
+		"typescript": "^5.8.3",
 		"vite": "^7.0.0",
-		"vitest": "^3.2.4",
-		"typescript": "^5.8.3"
+		"vitest": "^3.2.4"
 	}
 }

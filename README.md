@@ -225,23 +225,24 @@ Function components:
 
 ### Custom Element Integration
 
-Use `toJSX()` for type-safe custom element components:
+Use `toComponent()` for type-safe custom element components:
 
 ```tsx
-import { toJSX } from '@arcmantle/lit-jsx';
+import { toComponent } from '@arcmantle/lit-jsx';
 import { LitElement } from 'lit';
 
 export class MyButton extends LitElement {
   static tagName = 'my-button';
-  static tag = toJSX(MyButton);
 
   render() {
     return html`<button><slot></slot></button>`;
   }
 }
 
-// Usage with type safety
-<MyButton.tag
+const MyButtonComponent = toComponent(MyButton);
+
+// Usage with type safety - compiler automatically detects this as a custom element
+<MyButtonComponent
   class="custom-btn"
   onClick={() => console.log('Clicked!')}
 />
@@ -249,16 +250,14 @@ export class MyButton extends LitElement {
 
 #### Generic Custom Elements
 
-For custom elements with generic types, you can create type-safe JSX components using explicit type casting:
+For custom elements with generic types, you must use explicit type annotations due to TypeScript's inability to forward generic parameters through `toComponent()`:
 
 ```tsx
-import { toJSX } from '@arcmantle/lit-jsx';
+import { toComponent } from '@arcmantle/lit-jsx';
 import { LitElement } from 'lit';
 
 class DataList<T> extends LitElement {
   static tagName = 'data-list';
-  // Type casting is required due to TypeScript's inability to forward generics
-  static tag = toJSX(this) as <T>(props: JSX.JSXProps<DataList<T>>) => JSX.JSXElement;
 
   @property({ type: Array }) items: T[] = [];
   @property() renderItem?: (item: T) => TemplateResult;
@@ -274,24 +273,31 @@ class DataList<T> extends LitElement {
   }
 }
 
+// ❌ This won't work - TypeScript can't forward the generic parameter
+// const DataListComponent = toComponent(DataList);
+
+// ✅ Required: Explicit type annotation to preserve generic functionality
+const DataListComponent: <T>(props: JSX.JSXProps<DataList<T>>) => string =
+  toComponent(DataList);
+
 // Usage with explicit type parameter
-<DataList.tag<User>
+<DataListComponent<User>
   items={users}
   renderItem={(user) => `${user.name} (${user.email})`}
 />
 
 // Type inference works for the renderItem callback
-<DataList.tag<Product>
+<DataListComponent<Product>
   items={products}
   renderItem={(product) => `${product.name} - $${product.price}`}
 />
 ```
 
-**Note**: The current generic syntax requires explicit type casting due to TypeScript's limitations in forwarding generic parameters through static properties. If TypeScript gains the ability to forward generics in this context in the future, lit-jsx will implement a more seamless syntax.
+**Important**: The explicit type annotation `<T>(props: JSX.JSXProps<DataList<T>>) => string` is **required** for generic custom elements. Without this annotation, TypeScript will lose the generic type information and you won't be able to use type parameters like `<User>` or `<Product>` when using the component.
 
 ### Dynamic Tag Names
 
-lit-jsx supports dynamic element types with the `.tag` property pattern:
+lit-jsx supports dynamic element types using the `toTag()` helper:
 
 ```tsx
 import { toTag } from '@arcmantle/lit-jsx';
@@ -300,14 +306,14 @@ function ActionElement({ href, children }) {
   const Tag = toTag(href ? 'a' : 'button');
 
   return (
-    <Tag.tag href={href} class="action-element">
+    <Tag href={href} class="action-element">
       {children}
-    </Tag.tag>
+    </Tag>
   );
 }
 ```
 
-**Important**: Dynamic tag names must use the `.tag` property pattern for proper static template compilation.
+The compiler automatically detects when `toTag()` is used and optimizes the template accordingly.
 
 ### Library Components
 

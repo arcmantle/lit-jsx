@@ -1,14 +1,16 @@
 import type { PluginPass } from '@babel/core';
-import type { VisitNodeFunction } from '@babel/traverse';
-import { isJSXElement, isJSXIdentifier, type Program } from '@babel/types';
+import type { NodePath, VisitNodeFunction } from '@babel/traverse';
+import { isJSXElement, isJSXIdentifier, type JSXElement, type JSXOpeningElement, type Program } from '@babel/types';
 import { isValidHTMLNesting } from 'validate-html-nesting';
 
-import { isComponent } from './compiler-utils.js';
+import { customElementNameMap, getPathFilename, isComponent } from './compiler-utils.js';
+import { findElementDefinition } from './import-discovery.js';
 
 
-// From https://github.com/MananTank/babel-plugin-validate-jsx-nesting/blob/main/src/index.js
-const JSXValidator = {
-	JSXElement(path: any) {
+const preprocessVisitors = {
+	// From https://github.com/MananTank/babel-plugin-validate-jsx-nesting/blob/main/src/index.js
+	// Validates JSX nesting based on HTML5 rules.
+	JSXElement(path: NodePath<JSXElement>) {
 		const elName = path.node.openingElement.name;
 		const parent = path.parent;
 
@@ -32,9 +34,25 @@ const JSXValidator = {
 			}
 		}
 	},
+	// Discovers custom elements in JSX.
+	JSXOpeningElement(path: NodePath<JSXOpeningElement>) {
+		if (!path.node.name || !isJSXIdentifier(path.node.name))
+			return;
+
+		const result = findElementDefinition(path, true);
+		if (result.type !== 'custom-element')
+			return;
+
+		const currentFileName = getPathFilename(path);
+
+		const set = customElementNameMap.get(currentFileName)
+			?? customElementNameMap.set(currentFileName, new Set()).get(currentFileName)!;
+
+		set.add(path.node.name.name);
+	},
 };
 
 
-export const preprocess: VisitNodeFunction<PluginPass, Program> = (path, state): void => {
-	path.traverse(JSXValidator);
+export const preprocess: VisitNodeFunction<PluginPass, Program> = (path): void => {
+	path.traverse(preprocessVisitors);
 };
