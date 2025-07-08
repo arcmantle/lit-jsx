@@ -39,7 +39,7 @@ const preprocessVisitors = {
 		if (!path.node.name || !isJSXIdentifier(path.node.name))
 			return;
 
-		const result = findElementDefinition(path, true);
+		const result = findElementDefinition(path);
 		if (result.type !== 'custom-element')
 			return;
 

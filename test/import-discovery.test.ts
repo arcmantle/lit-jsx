@@ -45,9 +45,6 @@ test('can discover custom elements', async ({ expect }) => {
 	const result: { definition: ElementDefinition; } = { definition: { type: 'unknown' } };
 	(await babel.transformAsync(source, getOpts(result)))?.code;
 
-	console.log(result.definition);
-
-
 	// The console.log outputs will show you the traversal results
 	//console.log('Final transformed code:', code);
 });
@@ -70,10 +67,31 @@ test('can discover reassigned and re-exported toJSX elements', async ({ expect }
 	const result: { definition: ElementDefinition; } = { definition: { type: 'unknown' } };
 	(await babel.transformAsync(source, getOpts(result)))?.code;
 
-	console.log(result.definition);
-
-
 	// The console.log outputs will show the full tracing chain:
 	// FinalElement -> ReassignedElement -> ActualElement -> toJSX(MyActualComponent)
 	console.log('Test completed - check console output for tracing results');
+});
+
+test('can discover minified/renamed toComponent calls with local exports', async ({ expect }) => {
+	// This test uses the minified-example.ts file which simulates:
+	// import { toComponent as f } from '@arcmantle/lit-jsx';
+	// const v = f(Badge);
+	// export { v as BadgeCmp };
+
+	const source = `
+		import { BadgeCmp } from './import-discovery/minified-example.ts';
+
+		const template = (
+			<BadgeCmp />
+		);
+	`;
+
+	const result: { definition: ElementDefinition; } = { definition: { type: 'unknown' } };
+	(await babel.transformAsync(source, getOpts(result)))?.code;
+
+	// Should successfully trace:
+	// BadgeCmp -> v -> f(Badge) where f is renamed toComponent
+	expect(result.definition.type).toBe('custom-element');
+	expect(result.definition.source?.includes('minified-example.ts')).toBe(true);
+	expect(result.definition.callExpression).toBeDefined();
 });
