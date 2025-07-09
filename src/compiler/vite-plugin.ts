@@ -25,9 +25,7 @@ import { mergeAndConcat } from 'merge-anything';
 import type { PluginOption } from 'vite';
 
 import { litJsxBabelPreset } from './babel-preset.js';
-
-
-type BabelPlugins = NonNullable<NonNullable<babel.TransformOptions['parserOpts']>['plugins']>;
+import { debugMode, plugins } from './config.js';
 
 
 /**
@@ -41,12 +39,15 @@ type BabelPlugins = NonNullable<NonNullable<babel.TransformOptions['parserOpts']
  * @returns Vite plugin configuration
  */
 export const litJsx = (options: {
+	debug?: boolean; // Enable debug mode for additional logging
 	/** Options for the Babel transform */
 	babel?:
 		| babel.TransformOptions
 		| ((code: string, id: string) => babel.TransformOptions | Promise<babel.TransformOptions>);
 } = {}): PluginOption => {
 	let projectRoot: string;
+
+	debugMode.value = !!options.debug;
 
 	return {
 		name:   'lit-jsx-preserve',
@@ -63,9 +64,8 @@ export const litJsx = (options: {
 			},
 			order: 'pre',
 			async handler(source, id) {
-				const plugins: BabelPlugins = [ 'jsx', 'decorators', 'decoratorAutoAccessors' ];
 				if (id.endsWith('.tsx'))
-					plugins.push('typescript');
+					plugins.add('typescript');
 
 				// Default value for babel user options
 				let babelUserOptions: babel.TransformOptions = {};
@@ -99,7 +99,7 @@ export const litJsx = (options: {
 					configFile: false,
 					babelrc:    false,
 					parserOpts: {
-						plugins,
+						plugins: plugins.values().toArray(),
 					},
 				};
 

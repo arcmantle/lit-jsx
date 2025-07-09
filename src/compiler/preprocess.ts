@@ -1,6 +1,7 @@
 import type { PluginPass } from '@babel/core';
 import type { NodePath, VisitNodeFunction } from '@babel/traverse';
-import { isJSXElement, isJSXIdentifier, type JSXElement, type JSXOpeningElement, type Program } from '@babel/types';
+import type { JSXElement, JSXOpeningElement, Program } from '@babel/types';
+import { isJSXElement, isJSXIdentifier } from '@babel/types';
 import { isValidHTMLNesting } from 'validate-html-nesting';
 
 import { customElementNameMap, getPathFilename, isComponent } from './compiler-utils.js';

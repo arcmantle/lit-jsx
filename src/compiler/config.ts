@@ -1,4 +1,10 @@
-//
+export type BabelPlugins = NonNullable<NonNullable<babel.TransformOptions['parserOpts']>['plugins']>;
+
+
+export const plugins: Set<BabelPlugins[number]> = new Set([ 'jsx', 'decorators', 'decoratorAutoAccessors' ]);
+export const debugMode = { value: false };
+
+
 export const COMPONENT_LITERAL_PREFIX = '__$';
 export const COMPONENT_POSTFIX = '.tag';
 export const WHITESPACE_TAGS: string[] = [ 'pre', 'textarea' ];
