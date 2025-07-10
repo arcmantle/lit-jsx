@@ -1,8 +1,8 @@
 export type BabelPlugins = NonNullable<NonNullable<babel.TransformOptions['parserOpts']>['plugins']>;
 
 
-export const plugins: Set<BabelPlugins[number]> = new Set([ 'jsx', 'decorators', 'decoratorAutoAccessors' ]);
-export const debugMode = { value: false };
+export const babelPlugins: BabelPlugins = [ 'jsx', 'typescript', 'decorators', 'decoratorAutoAccessors' ];
+export const debugMode = { value: true };
 
 
 export const COMPONENT_LITERAL_PREFIX = '__$';

@@ -25,7 +25,7 @@ import { mergeAndConcat } from 'merge-anything';
 import type { PluginOption } from 'vite';
 
 import { litJsxBabelPreset } from './babel-preset.js';
-import { debugMode, plugins } from './config.js';
+import { babelPlugins, debugMode } from './config.js';
 
 
 /**
@@ -64,9 +64,6 @@ export const litJsx = (options: {
 			},
 			order: 'pre',
 			async handler(source, id) {
-				if (id.endsWith('.tsx'))
-					plugins.add('typescript');
-
 				// Default value for babel user options
 				let babelUserOptions: babel.TransformOptions = {};
 
@@ -99,7 +96,7 @@ export const litJsx = (options: {
 					configFile: false,
 					babelrc:    false,
 					parserOpts: {
-						plugins: plugins.values().toArray(),
+						plugins: babelPlugins,
 					},
 				};
 

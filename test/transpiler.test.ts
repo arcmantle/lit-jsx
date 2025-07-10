@@ -416,12 +416,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	// ========== CUSTOM ELEMENT TESTS (.tag) ==========
+	// ========== CUSTOM ELEMENT TESTS ==========
 
 	test('transforms simple custom element', async ({ expect }) => {
 		const source = `
-		const Button = { tag: 'custom-button' };
-		const template = <Button.tag>Click me</Button.tag>;
+		const Button = toTag('custom-button');
+		const template = <Button>Click me</Button>;
 		`;
 
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
@@ -429,18 +429,16 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Button = {
-			  tag: 'custom-button'
-			};
-			const __$Button = __$literalMap.get(Button.tag);
+			const Button = toTag('custom-button');
+			const __$Button = __$literalMap.get(Button);
 			const template = htmlStatic\`<\${__$Button}>Click me</\${__$Button}>\`;
 		`));
 	});
 
 	test('transforms custom element with attributes', async ({ expect }) => {
 		const source = `
-		const Button = { tag: 'custom-button' };
-		const template = <Button.tag type="submit" variant="primary">Submit</Button.tag>;
+		const Button = toTag('custom-button');
+		const template = <Button type="submit" variant="primary">Submit</Button>;
 		`;
 
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
@@ -448,19 +446,17 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Button = {
-			  tag: 'custom-button'
-			};
-			const __$Button = __$literalMap.get(Button.tag);
+			const Button = toTag('custom-button');
+			const __$Button = __$literalMap.get(Button);
 			const template = htmlStatic\`<\${__$Button} type="submit" variant="primary">Submit</\${__$Button}>\`;
 		`));
 	});
 
 	test('transforms custom element with dynamic attributes', async ({ expect }) => {
 		const source = `
-		const Button = { tag: 'custom-button' };
+		const Button = toTag('custom-button');
 		const variant = 'primary';
-		const template = <Button.tag variant={variant}>Dynamic</Button.tag>;
+		const template = <Button variant={variant}>Dynamic</Button>;
 		`;
 
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
@@ -468,10 +464,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Button = {
-			  tag: 'custom-button'
-			};
-			const __$Button = __$literalMap.get(Button.tag);
+			const Button = toTag('custom-button');
+			const __$Button = __$literalMap.get(Button);
 			const variant = 'primary';
 			const template = htmlStatic\`<\${__$Button} variant=\${variant}>Dynamic</\${__$Button}>\`;
 		`));
@@ -479,8 +473,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms self-closing custom element', async ({ expect }) => {
 		const source = `
-		const Icon = { tag: 'custom-icon' };
-		const template = <Icon.tag name="star" />;
+		const Icon = toTag('custom-button');
+		const template = <Icon name="star" />;
 		`;
 
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
@@ -488,10 +482,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Icon = {
-			  tag: 'custom-icon'
-			};
-			const __$Icon = __$literalMap.get(Icon.tag);
+			const Icon = toTag('custom-button');
+			const __$Icon = __$literalMap.get(Icon);
 			const template = htmlStatic\`<\${__$Icon} name="star"></\${__$Icon}>\`;
 		`));
 	});
@@ -848,9 +840,9 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms custom element with spread attributes', async ({ expect }) => {
 		const source = `
-		const Button = { tag: 'custom-button' };
+		const Button = toTag('custom-button');
 		const props = { variant: 'primary', size: 'large' };
-		const template = <Button.tag {...props}>Submit</Button.tag>;
+		const template = <Button {...props}>Submit</Button>;
 		`;
 
 		const code = (await babel.transformAsync(source, getOpts()))?.code;
@@ -858,10 +850,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap, __$rest } from "@arcmantle/lit-jsx";
-			const Button = {
-			  tag: 'custom-button'
-			};
-			const __$Button = __$literalMap.get(Button.tag);
+			const Button = toTag('custom-button');
+			const __$Button = __$literalMap.get(Button);
 			const props = {
 			  variant: 'primary',
 			  size: 'large'
@@ -930,10 +920,10 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms compiled template with standard template child', async ({ expect }) => {
 		const source = `
-		const Element = { tag: 'custom-element' };
+		const Element = toTag('custom-element');
 		const template = (
 			<div>
-				<Element.tag>Nested content</Element.tag>
+				<Element>Nested content</Element>
 			</div>
 		);
 		`;
@@ -943,21 +933,19 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Element = {
-			  tag: 'custom-element'
-			};
-			const __$Element = __$literalMap.get(Element.tag);
+			const Element = toTag('custom-element');
+			const __$Element = __$literalMap.get(Element);
 			const template = htmlStatic\`<div><\${__$Element}>Nested content</\${__$Element}></div>\`;
 		`));
 	});
 
 	test('transforms standard template with compiled template child', async ({ expect }) => {
 		const source = `
-		const Element = { tag: 'custom-element' };
+		const Element = toTag('custom-element');
 		const template = (
-			<Element.tag>
+			<Element>
 				<div>Regular content</div>
-			</Element.tag>
+			</Element>
 		);
 		`;
 
@@ -966,21 +954,19 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Element = {
-			  tag: 'custom-element'
-			};
-			const __$Element = __$literalMap.get(Element.tag);
+			const Element = toTag('custom-element');
+			const __$Element = __$literalMap.get(Element);
 			const template = htmlStatic\`<\${__$Element}><div>Regular content</\${__$Element}></\${__$Element}>\`;
 		`));
 	});
 
 	test('transforms fragment with mixed content types', async ({ expect }) => {
 		const source = `
-		const Element = { tag: 'custom-element' };
+		const Element = toTag('custom-element');
 		const template = (
 			<>
 				<div>Compiled content</div>
-				<Element.tag>Standard content</Element.tag>
+				<Element>Standard content</Element>
 				<MyComponent>Function component</MyComponent>
 			</>
 		);
@@ -991,10 +977,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Element = {
-			  tag: 'custom-element'
-			};
-			const __$Element = __$literalMap.get(Element.tag);
+			const Element = toTag('custom-element');
+			const __$Element = __$literalMap.get(Element);
 			const template = htmlStatic\`<div>Compiled content</div><\${__$Element}>Standard content</\${__$Element}>\${MyComponent({
 			  children: "Function component"
 			})}\`;
@@ -1003,19 +987,20 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms deeply nested mixed templates', async ({ expect }) => {
 		const source = `
-		const Card = { tag: 'ui-card' };
-		const Button = { tag: 'ui-button' };
+		const Icon = function() {};
+		const Card = toTag('ui-card');
+		const Button = toTag('ui-button');
 		const template = (
 			<div class="container">
-				<Card.tag title="Card Title">
+				<Card title="Card Title">
 					<div class="content">
 						<p>Some text content</p>
-						<Button.tag variant="primary">
+						<Button variant="primary">
 							<Icon name="save" />
 							Save
-						</Button.tag>
+						</Button>
 					</div>
-				</Card.tag>
+				</Card>
 			</div>
 		);
 		`;
@@ -1025,14 +1010,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Card = {
-			  tag: 'ui-card'
-			};
-			const __$Card = __$literalMap.get(Card.tag);
-			const Button = {
-			  tag: 'ui-button'
-			};
-			const __$Button = __$literalMap.get(Button.tag);
+			const Icon = function () {};
+			const Card = toTag('ui-card');
+			const __$Card = __$literalMap.get(Card);
+			const Button = toTag('ui-button');
+			const __$Button = __$literalMap.get(Button);
 			const template = htmlStatic\`<div class="container"><\${__$Card} title="Card Title"><div class="content"><p>Some text content</\${__$Card}><\${__$Button} variant="primary">\${Icon({
 			  name: "save"
 			})}Save</\${__$Button}></\${__$Card}></\${__$Card}></div>\`;
@@ -1200,35 +1182,35 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms form with mixed template types', async ({ expect }) => {
 		const source = `
-		const FormField = { tag: 'form-field' };
-		const Button = { tag: 'custom-button' };
+		const FormField = toTag('form-field');
+		const Button = toTag('custom-button');
 		const isSubmitting = false;
 		const template = (
 			<form onSubmit={handleSubmit}>
-				<FormField.tag label="Username" required>
+				<FormField label="Username" required>
 					<input
 						type="text"
 						value={formData.username}
 						onChange={handleChange}
 						disabled={bool => isSubmitting}
 					/>
-				</FormField.tag>
-				<FormField.tag label="Email">
+				</FormField>
+				<FormField label="Email">
 					<input
 						type="email"
 						value={formData.email}
 						onChange={handleChange}
 					/>
-				</FormField.tag>
+				</FormField>
 				<div class="form-actions">
-					<Button.tag
+					<Button
 						type="submit"
 						variant="primary"
 						disabled={bool => isSubmitting}
 						directive={[loading(isSubmitting)]}
 					>
 						{isSubmitting ? 'Submitting...' : 'Submit'}
-					</Button.tag>
+					</Button>
 					<ValidationMessages errors={errors} />
 				</div>
 			</form>
@@ -1240,14 +1222,10 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const FormField = {
-			  tag: 'form-field'
-			};
-			const __$FormField = __$literalMap.get(FormField.tag);
-			const Button = {
-			  tag: 'custom-button'
-			};
-			const __$Button = __$literalMap.get(Button.tag);
+			const FormField = toTag('form-field');
+			const __$FormField = __$literalMap.get(FormField);
+			const Button = toTag('custom-button');
+			const __$Button = __$literalMap.get(Button);
 			const isSubmitting = false;
 			const template = htmlStatic\`<form onSubmit=\${handleSubmit}><\${__$FormField} label="Username" required><input type="text" value=\${formData.username} onChange=\${handleChange} ?disabled=\${isSubmitting}></\${__$FormField}></\${__$FormField}><\${__$FormField} label="Email"><input type="email" value=\${formData.email} onChange=\${handleChange}></\${__$FormField}></\${__$FormField}><div class="form-actions"><\${__$Button} type="submit" variant="primary" ?disabled=\${isSubmitting} \${loading(isSubmitting)}>\${isSubmitting ? 'Submitting...' : 'Submit'}</\${__$Button}>\${ValidationMessages({
 			  errors: errors
@@ -1257,8 +1235,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms data table with dynamic content', async ({ expect }) => {
 		const source = `
-		const TableRow = { tag: 'table-row' };
-		const TableCell = { tag: 'table-cell' };
+		const TableRow = toTag('table-row');
+		const TableCell = toTag('table-cell');
 		const template = (
 			<div class="table-container">
 				<table>
@@ -1305,14 +1283,10 @@ suite('JSX to Lit Transpiler Tests', () => {
 			    "index": 3
 			  }]
 			};
-			const TableRow = {
-			  tag: 'table-row'
-			};
-			const __$TableRow = __$literalMap.get(TableRow.tag);
-			const TableCell = {
-			  tag: 'table-cell'
-			};
-			const __$TableCell = __$literalMap.get(TableCell.tag);
+			const TableRow = toTag('table-row');
+			const __$TableRow = __$literalMap.get(TableRow);
+			const TableCell = toTag('table-cell');
+			const __$TableCell = __$literalMap.get(TableCell);
 			const template = {
 			  "_$litType$": _temp,
 			  "values": [users.map(user => htmlStatic\`<\${__$TableRow} key=\${user.id}><\${__$TableCell}>\${user.name}</\${__$TableCell}><\${__$TableCell}>\${user.age}</\${__$TableCell}><\${__$TableCell}>\${ActionButton({
@@ -1329,9 +1303,9 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms dashboard layout with components and templates', async ({ expect }) => {
 		const source = `
-		const Card = { tag: 'ui-card' };
-		const Grid = { tag: 'ui-grid' };
-		const Sidebar = { tag: 'ui-sidebar' };
+		const Card = toTag('ui-card');
+		const Grid = toTag('ui-grid');
+		const Sidebar = toTag('ui-sidebar');
 		const template = (
 			<div class="dashboard">
 				<header class="dashboard-header">
@@ -1339,25 +1313,25 @@ suite('JSX to Lit Transpiler Tests', () => {
 					<UserMenu user={currentUser} />
 				</header>
 				<div class="dashboard-body">
-					<Sidebar.tag position="left">
+					<Sidebar position="left">
 						<NavigationMenu items={menuItems} />
-					</Sidebar.tag>
+					</Sidebar>
 					<main class="dashboard-content">
-						<Grid.tag cols="2" gap="large">
-							<Card.tag title="Statistics" span="2">
+						<Grid cols="2" gap="large">
+							<Card title="Statistics" span="2">
 								<StatsChart
 									data={chartData}
 									type="line"
 									directive={[resize()]}
 								/>
-							</Card.tag>
-							<Card.tag title="Recent Activity">
+							</Card>
+							<Card title="Recent Activity">
 								<ActivityFeed
 									items={activities}
 									maxItems={10}
 								/>
-							</Card.tag>
-							<Card.tag title="Quick Actions">
+							</Card>
+							<Card title="Quick Actions">
 								<div class="action-grid">
 									{quickActions.map(action => (
 										<ActionCard
@@ -1369,8 +1343,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 										/>
 									))}
 								</div>
-							</Card.tag>
-						</Grid.tag>
+							</Card>
+						</Grid>
 					</main>
 				</div>
 			</div>
@@ -1382,18 +1356,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Card = {
-			  tag: 'ui-card'
-			};
-			const __$Card = __$literalMap.get(Card.tag);
-			const Grid = {
-			  tag: 'ui-grid'
-			};
-			const __$Grid = __$literalMap.get(Grid.tag);
-			const Sidebar = {
-			  tag: 'ui-sidebar'
-			};
-			const __$Sidebar = __$literalMap.get(Sidebar.tag);
+			const Card = toTag('ui-card');
+			const __$Card = __$literalMap.get(Card);
+			const Grid = toTag('ui-grid');
+			const __$Grid = __$literalMap.get(Grid);
+			const Sidebar = toTag('ui-sidebar');
+			const __$Sidebar = __$literalMap.get(Sidebar);
 			const template = htmlStatic\`<div class="dashboard"><header class="dashboard-header"><h1>Dashboard</h1>\${UserMenu({
 			  user: currentUser
 			})}</header><div class="dashboard-body"><\${__$Sidebar} position="left">\${NavigationMenu({
@@ -1417,12 +1385,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms modal with portal and dynamic content', async ({ expect }) => {
 		const source = `
-		const Modal = { tag: 'ui-modal' };
-		const Portal = { tag: 'ui-portal' };
-		const Button = { tag: 'ui-button' };
+		const Modal = toTag('ui-modal');
+		const Portal = toTag('ui-portal');
+		const Button = toTag('ui-button');
 		const template = (
-			<Portal.tag target="body">
-				<Modal.tag
+			<Portal target="body">
+				<Modal
 					open={bool => isOpen}
 					onClose={handleClose}
 					directive={[
@@ -1433,14 +1401,14 @@ suite('JSX to Lit Transpiler Tests', () => {
 				>
 					<div class="modal-header">
 						<h2>{title}</h2>
-						<Button.tag
+						<Button
 							variant="ghost"
 							size="small"
 							onClick={handleClose}
 							aria-label="Close"
 						>
 							<CloseIcon />
-						</Button.tag>
+						</Button>
 					</div>
 					<div class="modal-body">
 						{content || (
@@ -1452,18 +1420,18 @@ suite('JSX to Lit Transpiler Tests', () => {
 					</div>
 					<div class="modal-footer">
 						{actions.map(action => (
-							<Button.tag
+							<Button
 								key={action.id}
 								variant={action.variant || 'secondary'}
 								onClick={action.handler}
 								disabled={bool => action.disabled}
 							>
 								{action.label}
-							</Button.tag>
+							</Button>
 						))}
 					</div>
-				</Modal.tag>
-			</Portal.tag>
+				</Modal>
+			</Portal>
 		);
 		`;
 
@@ -1472,18 +1440,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const Modal = {
-			  tag: 'ui-modal'
-			};
-			const __$Modal = __$literalMap.get(Modal.tag);
-			const Portal = {
-			  tag: 'ui-portal'
-			};
-			const __$Portal = __$literalMap.get(Portal.tag);
-			const Button = {
-			  tag: 'ui-button'
-			};
-			const __$Button = __$literalMap.get(Button.tag);
+			const Modal = toTag('ui-modal');
+			const __$Modal = __$literalMap.get(Modal);
+			const Portal = toTag('ui-portal');
+			const __$Portal = __$literalMap.get(Portal);
+			const Button = toTag('ui-button');
+			const __$Button = __$literalMap.get(Button);
 			const template = htmlStatic\`<\${__$Portal} target="body"><\${__$Modal} ?open=\${isOpen} onClose=\${handleClose} \${trapFocus()} \${preventScroll()} \${clickOutside(handleClose)}><div class="modal-header"><h2>\${title}</\${__$Modal}><\${__$Button} variant="ghost" size="small" onClick=\${handleClose} aria-label="Close">\${CloseIcon({})}</\${__$Button}></\${__$Modal}><div class="modal-body">\${content || DefaultContent({
 			  type: contentType,
 			  data: contentData

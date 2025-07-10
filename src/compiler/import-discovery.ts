@@ -9,662 +9,735 @@ import type { Logger } from 'pino';
 
 import { traverse } from './babel-traverse.ts';
 import { getPathFilename, isComponent } from './compiler-utils.ts';
-import { debugMode, plugins } from './config.ts';
+import { type BabelPlugins, babelPlugins, debugMode } from './config.ts';
 import { createLogger } from './create-logger.ts';
 
 
 export interface ElementDefinition {
 	type:            'custom-element' | 'import' | 'local-variable' | 'unknown';
-	source?:         string; // file path for imports
-	originalName?:   string; // for imports/re-exports
-	localName?:      string; // the name used locally (for debugging rename chains)
-	callExpression?: t.CallExpression; // for toJSX calls
+	source?:         string;
+	originalName?:   string;
+	localName?:      string;
+	callExpression?: t.CallExpression;
+}
+
+export interface ImportDiscoveryConfig {
+	debugMode?: boolean;
+	plugins?:   BabelPlugins;
+}
+
+export interface FileSystemAdapter {
+	existsSync:   (path: string) => boolean;
+	readFileSync: (path: string, encoding: 'utf-8') => string;
+}
+
+export interface ResolverAdapter {
+	sync: (basedir: string, module: string) => { path?: string; };
 }
 
 
-let log: Logger<never, boolean>;
+export class ImportDiscovery {
 
+	static readonly fileCache:       Map<string, t.File> = new Map();
+	static readonly definitionCache: Map<string, ElementDefinition> = new Map();
 
-// Cache for parsed files to avoid re-parsing
-const fileCache: Map<string, t.File> = new Map();
+	protected readonly log:          Logger<never, boolean>;
+	protected readonly visitedFiles: Set<string> = new Set();
 
-
-// Helper function to find the definition of a JSX element
-export function findElementDefinition(
-	path: NodePath<t.JSXOpeningElement>,
-): ElementDefinition {
-	log ??= createLogger('import-discovery', debugMode.value);
-	fileCache.clear(); // Clear cache for fresh discovery
-
-	const elementName = path.node.name;
-	const currentFileName = getPathFilename(path);
-
-	// Only handle JSXIdentifier (not JSXMemberExpression or JSXNamespacedName)
-	if (!t.isJSXIdentifier(elementName)) {
-		log.trace({
-			elementType: elementName.type,
-			fn:          'findElementDefinition',
-		}, 'Unsupported JSX element type, skipping');
-
-		return { type: 'unknown' };
+	constructor(
+		protected readonly config: ImportDiscoveryConfig = {},
+		protected readonly fs: FileSystemAdapter = { existsSync, readFileSync },
+		protected readonly resolver: ResolverAdapter = resolve,
+	) {
+		this.log = createLogger('import-discovery', this.config.debugMode ?? debugMode.value);
 	}
 
-	const elementNameString = elementName.name;
-	if (!isComponent(elementNameString)) {
-		log.trace({
+	findElementDefinition(
+		path: NodePath<t.JSXOpeningElement>,
+	): ElementDefinition {
+		const elementName = path.node.name;
+		const currentFileName = getPathFilename(path);
+
+		// Only handle JSXIdentifier (not JSXMemberExpression or JSXNamespacedName)
+		if (!t.isJSXIdentifier(elementName)) {
+			this.log.trace({
+				elementType: elementName.type,
+				fn:          'findElementDefinition',
+			}, 'Unsupported JSX element type, skipping');
+
+
+			return { type: 'unknown' };
+		}
+
+		const elementNameString = elementName.name;
+
+		const cacheKey = this.getCallSiteKey(elementNameString, path);
+		if (ImportDiscovery.definitionCache.has(cacheKey)) {
+			this.log.trace({
+				element: elementNameString,
+				cacheKey,
+				fn:      'findElementDefinition',
+			}, 'Using cached definition');
+
+			return ImportDiscovery.definitionCache.get(cacheKey)!;
+		}
+
+		if (!isComponent(elementNameString)) {
+			this.log.trace({
+				element: elementNameString,
+				fn:      'findElementDefinition',
+			}, 'Element name is not a component, skipping');
+
+			return { type: 'unknown' };
+		}
+
+		this.log.debug({
 			element: elementNameString,
+			file:    currentFileName,
 			fn:      'findElementDefinition',
-		}, 'Element name is not a component, skipping');
+		}, 'Starting element definition discovery');
 
-		return { type: 'unknown' };
+		const startTime = Date.now();
+		const result = this.traceElementDefinition(elementNameString, path.scope, currentFileName);
+		const duration = Date.now() - startTime;
+
+		ImportDiscovery.definitionCache.set(cacheKey, result);
+
+		this.log.debug({
+			element:      elementNameString,
+			result:       result.type,
+			source:       result.source,
+			originalName: result.originalName,
+			localName:    result.localName,
+			duration:     `${ duration }ms`,
+			fn:           'findElementDefinition',
+		}, 'Element definition discovery completed');
+
+		return result;
 	}
 
-	log.debug({
-		element: elementNameString,
-		file:    currentFileName,
-		fn:      'findElementDefinition',
-	}, 'Starting element definition discovery');
+	// Generate a unique cache key for each call site
+	protected getCallSiteKey(
+		elementName: string,
+		path: NodePath<t.JSXOpeningElement>,
+	): string {
+		const filename = getPathFilename(path);
+		const node = path.node;
 
-	const startTime = Date.now();
-	const result = traceElementDefinition(elementNameString, path.scope, currentFileName);
-	const duration = Date.now() - startTime;
+		// Use source location if available for precise call site identification
+		if (node.loc)
+			return `${ filename }:${ node.loc.start.line }:${ node.loc.start.column }:${ elementName }`;
 
-	log.debug({
-		element:      elementNameString,
-		result:       result.type,
-		source:       result.source,
-		originalName: result.originalName,
-		localName:    result.localName,
-		duration:     `${ duration }ms`,
-		fn:           'findElementDefinition',
-	}, 'Element definition discovery completed');
+		// Fallback to byte positions
+		if (typeof node.start === 'number')
+			return `${ filename }:${ node.start }:${ elementName }`;
 
-	return result;
-}
+		// Last resort: use path structure
+		const pathKeys = [];
+		let current: NodePath = path;
+		while (current.parent) {
+			pathKeys.unshift(`${ current.key }:${ current.listKey || '' }`);
+			current = current.parentPath!;
+		}
 
-// Core recursive tracing function
-function traceElementDefinition(
-	elementName: string,
-	scope: Scope,
-	currentFileName: string,
-	visitedFiles: Set<string> = new Set(),
-): ElementDefinition {
-	const traceKey = `${ currentFileName }:${ elementName }`;
-	// Prevent infinite recursion
-	if (visitedFiles.has(traceKey)) {
-		log.warn({
-			traceKey,
-			fn: 'traceElementDefinition',
-		}, 'Circular reference detected, stopping trace');
-
-		return { type: 'unknown' };
+		return `${ filename }:${ pathKeys.join('/') }:${ elementName }`;
 	}
 
-	visitedFiles.add(traceKey);
+	protected traceElementDefinition(
+		elementName: string,
+		scope: Scope,
+		currentFileName: string,
+	): ElementDefinition {
+		const traceKey = `${ currentFileName }:${ elementName }`;
+		// Prevent infinite recursion
+		if (this.visitedFiles.has(traceKey)) {
+			this.log.warn({
+				traceKey,
+				fn: 'traceElementDefinition',
+			}, 'Circular reference detected, stopping trace');
 
-	log.debug({
-		element:      elementName,
-		file:         currentFileName,
-		visitedCount: visitedFiles.size,
-		fn:           'traceElementDefinition',
-	}, 'Tracing element definition');
+			return { type: 'unknown' };
+		}
 
-	// Check if there's a binding for this identifier in the current scope
-	const binding = scope.getBinding(elementName);
+		this.visitedFiles.add(traceKey);
 
-	if (!binding) {
-		log.debug({
-			element: elementName,
-			fn:      'traceElementDefinition',
-		}, 'No binding found for element');
+		this.log.debug({
+			element:      elementName,
+			file:         currentFileName,
+			visitedCount: this.visitedFiles.size,
+			fn:           'traceElementDefinition',
+		}, 'Tracing element definition');
 
-		return { type: 'unknown' };
-	}
+		// Check if there's a binding for this identifier in the current scope
+		const binding = scope.getBinding(elementName);
 
-	log.trace({
-		element:  elementName,
-		kind:     binding.kind,
-		pathType: binding.path.type,
-		fn:       'traceElementDefinition',
-	}, 'Found binding');
+		if (!binding) {
+			this.log.debug({
+				element: elementName,
+				fn:      'traceElementDefinition',
+			}, 'No binding found for element');
 
-	// Handle imports
-	if (binding.kind === 'module' && t.isImportSpecifier(binding.path.node)) {
-		log.debug({
-			element: elementName,
-			fn:      'traceElementDefinition',
-		}, 'Tracing import binding');
+			return { type: 'unknown' };
+		}
 
-		return traceImport(binding, currentFileName, elementName, visitedFiles);
-	}
+		this.log.trace({
+			element:  elementName,
+			kind:     binding.kind,
+			pathType: binding.path.type,
+			fn:       'traceElementDefinition',
+		}, 'Found binding');
 
-	// Handle local variables/constants
-	if (binding.kind === 'const' || binding.kind === 'let' || binding.kind === 'var') {
-		log.debug({
+		// Handle imports
+		if (binding.kind === 'module' && t.isImportSpecifier(binding.path.node)) {
+			this.log.debug({
+				element: elementName,
+				fn:      'traceElementDefinition',
+			}, 'Tracing import binding');
+
+			return this.traceImport(binding, currentFileName, elementName);
+		}
+
+		// Handle local variables/constants
+		if (binding.kind === 'const' || binding.kind === 'let' || binding.kind === 'var') {
+			this.log.debug({
+				element: elementName,
+				kind:    binding.kind,
+				fn:      'traceElementDefinition',
+			}, 'Tracing local variable binding');
+
+			return this.traceLocalVariable(binding, currentFileName);
+		}
+
+		this.log.debug({
 			element: elementName,
 			kind:    binding.kind,
 			fn:      'traceElementDefinition',
-		}, 'Tracing local variable binding');
+		}, 'Unsupported binding type');
 
-		return traceLocalVariable(binding, currentFileName, visitedFiles);
+		return { type: 'unknown' };
 	}
 
-	log.debug({
-		element: elementName,
-		kind:    binding.kind,
-		fn:      'traceElementDefinition',
-	}, 'Unsupported binding type');
 
-	return { type: 'unknown' };
-}
-
-
-function traceImport(
-	binding: Binding,
-	currentFileName: string,
-	elementName: string,
-	visitedFiles: Set<string>,
-): ElementDefinition {
-	log.debug({
-		element: elementName,
-		file:    currentFileName,
-		fn:      'traceImport',
-	}, 'Tracing import');
-
-	const importDeclaration = binding.path.parent;
-
-	if (!t.isImportDeclaration(importDeclaration)) {
-		log.warn({
+	protected traceImport(
+		binding: Binding,
+		currentFileName: string,
+		elementName: string,
+	): ElementDefinition {
+		this.log.debug({
 			element: elementName,
+			file:    currentFileName,
 			fn:      'traceImport',
-		}, 'Expected ImportDeclaration but got different type');
+		}, 'Tracing import');
 
-		return { type: 'unknown' };
-	}
+		const importDeclaration = binding.path.parent;
 
-	// Get the original exported name from the import specifier
-	const importSpecifier = binding.path.node;
-	if (!t.isImportSpecifier(importSpecifier)) {
-		log.warn({
-			element: elementName,
-			fn:      'traceImport',
-		}, 'Expected ImportSpecifier but got different type');
+		if (!t.isImportDeclaration(importDeclaration)) {
+			this.log.warn({
+				element: elementName,
+				fn:      'traceImport',
+			}, 'Expected ImportDeclaration but got different type');
 
-		return { type: 'unknown' };
-	}
+			return { type: 'unknown' };
+		}
 
-	// The imported name is what we need to look for in the source file
-	const originalExportedName = t.isIdentifier(importSpecifier.imported)
-		? importSpecifier.imported.name
-		: importSpecifier.imported.value;
+		// Get the original exported name from the import specifier
+		const importSpecifier = binding.path.node;
+		if (!t.isImportSpecifier(importSpecifier)) {
+			this.log.warn({
+				element: elementName,
+				fn:      'traceImport',
+			}, 'Expected ImportSpecifier but got different type');
 
-	const importSource = importDeclaration.source.value;
-	const currentDir = dirname(currentFileName);
+			return { type: 'unknown' };
+		}
 
-	const resolvedResult = resolve.sync(currentDir, importSource);
-	const resolvedPath = resolvedResult.path!;
+		// The imported name is what we need to look for in the source file
+		const originalExportedName = t.isIdentifier(importSpecifier.imported)
+			? importSpecifier.imported.name
+			: importSpecifier.imported.value;
 
-	if (!resolvedPath) {
-		log.warn({
-			source: importSource,
-			currentDir,
-			fn:     'traceImport',
-		}, 'Failed to resolve import path');
+		const importSource = importDeclaration.source.value;
+		const currentDir = dirname(currentFileName);
 
-		return { type: 'unknown' };
-	}
+		const resolvedResult = resolve.sync(currentDir, importSource);
+		const resolvedPath = resolvedResult.path!;
 
-	log.debug({
-		localName:    elementName,
-		importedName: originalExportedName,
-		source:       importSource,
-		resolvedPath,
-		fn:           'traceImport',
-	}, 'Import mapping resolved');
+		if (!resolvedPath) {
+			this.log.warn({
+				source: importSource,
+				currentDir,
+				fn:     'traceImport',
+			}, 'Failed to resolve import path');
 
-	// Use cached parsing
-	const ast = getOrParseFile(resolvedPath);
-	if (!ast) {
-		log.warn({
+			return { type: 'unknown' };
+		}
+
+		this.log.debug({
+			localName:    elementName,
+			importedName: originalExportedName,
+			source:       importSource,
 			resolvedPath,
-			fn: 'traceImport',
-		}, 'Failed to parse imported file');
+			fn:           'traceImport',
+		}, 'Import mapping resolved');
 
-		return { type: 'unknown' };
-	}
+		// Use cached parsing
+		const ast = this.getOrParseFile(resolvedPath);
+		if (!ast) {
+			this.log.warn({
+				resolvedPath,
+				fn: 'traceImport',
+			}, 'Failed to parse imported file');
 
-	let result: ElementDefinition = { type: 'unknown' };
+			return { type: 'unknown' };
+		}
 
-	traverse(ast, {
-		Program(programPath) {
-			// Look for the original exported name in the imported file
-			const localBinding = programPath.scope.getBinding(originalExportedName);
+		let result: ElementDefinition = { type: 'unknown' };
 
-			if (localBinding) {
-				log.debug({
-					name: originalExportedName,
-					fn:   'traceImport',
-				}, 'Found local binding in imported file');
+		traverse(ast, {
+			Program: (programPath) => {
+				// Look for the original exported name in the imported file
+				const localBinding = programPath.scope.getBinding(originalExportedName);
 
-				result = traceElementDefinition(
-					originalExportedName,
-					programPath.scope,
-					resolvedPath,
-					visitedFiles,
-				);
+				if (localBinding) {
+					this.log.debug({
+						name: originalExportedName,
+						fn:   'traceImport',
+					}, 'Found local binding in imported file');
 
-				// Add the import mapping information to the result
-				if (result.type !== 'unknown') {
-					result.originalName = originalExportedName;
-					result.localName = elementName;
+					result = this.traceElementDefinition(
+						originalExportedName,
+						programPath.scope,
+						resolvedPath,
+					);
+
+					// Add the import mapping information to the result
+					if (result.type !== 'unknown') {
+						result.originalName = originalExportedName;
+						result.localName = elementName;
+					}
+
+					// Exit the traversal
+					return programPath.stop();
 				}
 
-				// Exit the traversal
-				return programPath.stop();
+				this.log.debug({
+					name: originalExportedName,
+					fn:   'traceImport',
+				}, 'No local binding found, checking for re-exports');
+
+				// If no local binding found, check for re-exports
+				result = this.checkForReExports(
+					programPath,
+					originalExportedName,
+					resolvedPath,
+				);
+			},
+		});
+
+		return result;
+	}
+
+	protected traceLocalVariable(
+		binding: Binding,
+		currentFileName: string,
+	): ElementDefinition {
+		this.log.trace({
+			kind:     binding.kind,
+			pathType: binding.path.type,
+			fn:       'traceLocalVariable',
+		}, 'Tracing local variable');
+
+		// Check if it's a variable declarator (const/let/var)
+		if (!t.isVariableDeclarator(binding.path.node)) {
+			this.log.trace({
+				fn: 'traceLocalVariable',
+			}, 'Local variable with no recognized pattern');
+
+			return { type: 'local-variable' };
+		}
+
+		const declarator = binding.path.node;
+
+		if (!declarator.init) {
+			this.log.trace({
+				fn: 'traceLocalVariable',
+			}, 'Local variable has no initializer');
+
+			return { type: 'local-variable' };
+		}
+
+		this.log.trace({
+			initType: declarator.init.type,
+			fn:       'traceLocalVariable',
+		}, 'Checking local variable assignment type');
+
+		// Check if it's assigned to a call expression
+		if (t.isCallExpression(declarator.init)) {
+			const callExpr = declarator.init;
+
+			// Check if it's a toComponent/toTag call (accounting for renamed imports)
+			if (this.isToComponentOrTagCall(callExpr, binding.path.scope)) {
+				this.log.debug({
+					callee: t.isIdentifier(callExpr.callee)
+						? callExpr.callee.name
+						: 'unknown',
+					file: currentFileName,
+					fn:   'traceLocalVariable',
+				}, 'Found toComponent/toTag call assignment');
+
+				return {
+					type:           'custom-element',
+					source:         currentFileName,
+					callExpression: callExpr,
+				};
 			}
 
-			log.debug({
-				name: originalExportedName,
-				fn:   'traceImport',
-			}, 'No local binding found, checking for re-exports');
+			// Could be assigned to another function call - trace that too
+			this.log.trace({
+				callee: t.isIdentifier(callExpr.callee)
+					? callExpr.callee.name
+					: callExpr.callee.type,
+				fn: 'traceLocalVariable',
+			}, 'Local variable assigned to call expression');
 
-			// If no local binding found, check for re-exports
-			result = checkForReExports(
-				programPath,
-				originalExportedName,
-				resolvedPath,
-				visitedFiles,
-			);
-		},
-	});
-
-	return result;
-}
-
-
-function traceLocalVariable(
-	binding: Binding,
-	currentFileName: string,
-	visitedFiles: Set<string>,
-): ElementDefinition {
-	log.trace({
-		kind:     binding.kind,
-		pathType: binding.path.type,
-		fn:       'traceLocalVariable',
-	}, 'Tracing local variable');
-
-	// Check if it's a variable declarator (const/let/var)
-	if (!t.isVariableDeclarator(binding.path.node)) {
-		log.trace({
-			fn: 'traceLocalVariable',
-		}, 'Local variable with no recognized pattern');
-
-		return { type: 'local-variable' };
-	}
-
-	const declarator = binding.path.node;
-
-	if (!declarator.init) {
-		log.trace({
-			fn: 'traceLocalVariable',
-		}, 'Local variable has no initializer');
-
-		return { type: 'local-variable' };
-	}
-
-	log.trace({
-		initType: declarator.init.type,
-		fn:       'traceLocalVariable',
-	}, 'Checking local variable assignment type');
-
-	// Check if it's assigned to a call expression
-	if (t.isCallExpression(declarator.init)) {
-		const callExpr = declarator.init;
-
-		// Check if it's a toComponent/toTag call (accounting for renamed imports)
-		if (isToComponentOrTagCall(callExpr, binding.path.scope)) {
-			log.debug({
+			// Add debug info if we're not continuing the trace
+			this.log.debug({
 				callee: t.isIdentifier(callExpr.callee)
 					? callExpr.callee.name
 					: 'unknown',
 				file: currentFileName,
 				fn:   'traceLocalVariable',
-			}, 'Found toComponent/toTag call assignment');
-
-			return {
-				type:           'custom-element',
-				source:         currentFileName,
-				callExpression: callExpr,
-			};
+			}, 'Found non-toComponent/toTag call expression, stopping trace');
 		}
 
-		// Could be assigned to another function call - trace that too
-		log.trace({
-			callee: t.isIdentifier(callExpr.callee)
-				? callExpr.callee.name
-				: callExpr.callee.type,
-			fn: 'traceLocalVariable',
-		}, 'Local variable assigned to call expression');
+		// Check if it's assigned to an identifier (another variable)
+		if (t.isIdentifier(declarator.init)) {
+			const assignedIdentifier = declarator.init.name;
 
-		// Add debug info if we're not continuing the trace
-		log.debug({
-			callee: t.isIdentifier(callExpr.callee)
-				? callExpr.callee.name
-				: 'unknown',
-			file: currentFileName,
-			fn:   'traceLocalVariable',
-		}, 'Found non-toComponent/toTag call expression, stopping trace');
+			this.log.trace({
+				to: t.isIdentifier(declarator.id)
+					? declarator.id.name
+					: 'unknown',
+				from: assignedIdentifier,
+				fn:   'traceLocalVariable',
+			}, 'Following variable assignment chain');
+
+			// Recursively trace this identifier in the same scope
+			return this.traceElementDefinition(
+				assignedIdentifier,
+				binding.path.scope,
+				currentFileName,
+			);
+		}
+
+		return { type: 'local-variable' };
 	}
 
-	// Check if it's assigned to an identifier (another variable)
-	if (t.isIdentifier(declarator.init)) {
-		const assignedIdentifier = declarator.init.name;
+	protected checkForReExports(
+		programPath: babel.NodePath<babel.types.Program>,
+		elementName: string,
+		currentFileName: string,
+	): ElementDefinition {
+		this.log.debug({
+			element: elementName,
+			file:    currentFileName,
+			fn:      'checkForReExports',
+		}, 'Checking for re-exports');
 
-		log.trace({
-			to: t.isIdentifier(declarator.id)
-				? declarator.id.name
-				: 'unknown',
-			from: assignedIdentifier,
-			fn:   'traceLocalVariable',
-		}, 'Following variable assignment chain');
+		let result: ElementDefinition = { type: 'unknown' };
 
-		// Recursively trace this identifier in the same scope
-		return traceElementDefinition(
-			assignedIdentifier,
-			binding.path.scope,
-			currentFileName,
-			visitedFiles,
-		);
-	}
+		// Check all export declarations for re-exports
+		programPath.traverse({
+			ExportNamedDeclaration: (exportPath) => {
+				const node = exportPath.node;
 
-	return { type: 'local-variable' };
-}
-
-
-function checkForReExports(
-	programPath: babel.NodePath<babel.types.Program>,
-	elementName: string,
-	currentFileName: string,
-	visitedFiles: Set<string>,
-): ElementDefinition {
-	log.debug({
-		element: elementName,
-		file:    currentFileName,
-		fn:      'checkForReExports',
-	}, 'Checking for re-exports');
-
-	let result: ElementDefinition = { type: 'unknown' };
-
-	// Check all export declarations for re-exports
-	programPath.traverse({
-		ExportNamedDeclaration(exportPath) {
-			const node = exportPath.node;
-
-			// Handle re-exports with source: export { X } from './file'
-			if (node.source) {
-				log.trace({
-					source: node.source.value,
-					fn:     'checkForReExports',
-				}, 'Found re-export with source');
-
-				for (const specifier of node.specifiers) {
-					if (!t.isExportSpecifier(specifier)) {
-						log.trace({
-							specifierType: specifier.type,
-							fn:            'checkForReExports',
-						}, 'Skipping non-export specifier in re-export');
-
-						continue; // Only handle export specifiers
-					}
-
-					const exportedName = t.isIdentifier(specifier.exported)
-						? specifier.exported.name
-						: specifier.exported.value;
-
-					// Check if this re-export matches our element name
-					if (exportedName !== elementName)
-						continue;
-
-					const originalName = specifier.local.name;
-
-					log.debug({
-						originalName,
-						exportedName,
+				// Handle re-exports with source: export { X } from './file'
+				if (node.source) {
+					this.log.trace({
 						source: node.source.value,
 						fn:     'checkForReExports',
-					}, 'Found matching re-export');
+					}, 'Found re-export with source');
 
-					// Resolve and trace the re-exported file
-					const reExportSource = node.source.value;
-					const currentDir = dirname(currentFileName);
+					for (const specifier of node.specifiers) {
+						if (!t.isExportSpecifier(specifier)) {
+							this.log.trace({
+								specifierType: specifier.type,
+								fn:            'checkForReExports',
+							}, 'Skipping non-export specifier in re-export');
 
-					const resolvedResult = resolve.sync(currentDir, reExportSource);
-					const resolvedPath = resolvedResult.path!;
+							continue; // Only handle export specifiers
+						}
 
-					if (!existsSync(resolvedPath)) {
-						log.warn({
-							path: resolvedPath,
-							fn:   'checkForReExports',
-						}, 'Re-export target file not found');
+						const exportedName = t.isIdentifier(specifier.exported)
+							? specifier.exported.name
+							: specifier.exported.value;
 
-						continue; // Skip if file doesn't exist
+						// Check if this re-export matches our element name
+						if (exportedName !== elementName)
+							continue;
+
+						const originalName = specifier.local.name;
+
+						this.log.debug({
+							originalName,
+							exportedName,
+							source: node.source.value,
+							fn:     'checkForReExports',
+						}, 'Found matching re-export');
+
+						// Resolve and trace the re-exported file
+						const reExportSource = node.source.value;
+						const currentDir = dirname(currentFileName);
+
+						const resolvedResult = resolve.sync(currentDir, reExportSource);
+						const resolvedPath = resolvedResult.path!;
+
+						if (!existsSync(resolvedPath)) {
+							this.log.warn({
+								path: resolvedPath,
+								fn:   'checkForReExports',
+							}, 'Re-export target file not found');
+
+							continue; // Skip if file doesn't exist
+						}
+
+						this.log.debug({
+							resolvedPath,
+							fn: 'checkForReExports',
+						}, 'Tracing re-export to file');
+
+						result = this.traceReExport(originalName, resolvedPath);
+
+						// Add the re-export mapping information to the result
+						if (result.type !== 'unknown') {
+							result.originalName = originalName;
+							result.localName = exportedName;
+						}
+
+						// Stop traversing once we find the match
+						return exportPath.stop();
 					}
-
-					log.debug({
-						resolvedPath,
-						fn: 'checkForReExports',
-					}, 'Tracing re-export to file');
-
-					result = traceReExport(originalName, resolvedPath, visitedFiles);
-
-					// Add the re-export mapping information to the result
-					if (result.type !== 'unknown') {
-						result.originalName = originalName;
-						result.localName = exportedName;
-					}
-
-					// Stop traversing once we find the match
-					return exportPath.stop();
 				}
-			}
-			// Handle local exports without source: export { v as BadgeCmp }
-			else {
-				log.trace({
-					fn: 'checkForReExports',
-				}, 'Found local export without source');
-
-				for (const specifier of node.specifiers) {
-					if (!t.isExportSpecifier(specifier)) {
-						log.trace({
-							specifierType: specifier.type,
-							fn:            'checkForReExports',
-						}, 'Skipping non-export specifier in local export');
-
-						continue; // Only handle export specifiers
-					}
-
-					const exportedName = t.isIdentifier(specifier.exported)
-						? specifier.exported.name
-						: specifier.exported.value;
-
-					// Check if this local export matches our element name
-					if (exportedName !== elementName)
-						continue;
-
-					const localName = specifier.local.name;
-
-					log.debug({
-						localName,
-						exportedName,
+				// Handle local exports without source: export { v as BadgeCmp }
+				else {
+					this.log.trace({
 						fn: 'checkForReExports',
-					}, 'Found matching local export');
+					}, 'Found local export without source');
 
-					// Trace the local variable in the current file
-					result = traceElementDefinition(
-						localName,
-						programPath.scope,
-						currentFileName,
-						visitedFiles,
-					);
+					for (const specifier of node.specifiers) {
+						if (!t.isExportSpecifier(specifier)) {
+							this.log.trace({
+								specifierType: specifier.type,
+								fn:            'checkForReExports',
+							}, 'Skipping non-export specifier in local export');
 
-					// Add the export mapping information to the result
-					if (result.type !== 'unknown') {
-						result.originalName = localName;
-						result.localName = exportedName;
+							continue; // Only handle export specifiers
+						}
+
+						const exportedName = t.isIdentifier(specifier.exported)
+							? specifier.exported.name
+							: specifier.exported.value;
+
+						// Check if this local export matches our element name
+						if (exportedName !== elementName)
+							continue;
+
+						const localName = specifier.local.name;
+
+						this.log.debug({
+							localName,
+							exportedName,
+							fn: 'checkForReExports',
+						}, 'Found matching local export');
+
+						// Trace the local variable in the current file
+						result = this.traceElementDefinition(
+							localName,
+							programPath.scope,
+							currentFileName,
+						);
+
+						// Add the export mapping information to the result
+						if (result.type !== 'unknown') {
+							result.originalName = localName;
+							result.localName = exportedName;
+						}
+
+						// Stop traversing once we find the match
+						return exportPath.stop();
 					}
-
-					// Stop traversing once we find the match
-					return exportPath.stop();
 				}
-			}
-		},
-	});
-
-	log.debug({
-		element:    elementName,
-		resultType: result.type,
-		fn:         'checkForReExports',
-	}, 'Re-export check completed');
-
-	return result;
-}
-
-
-function traceReExport(
-	elementName: string,
-	filePath: string,
-	visitedFiles: Set<string>,
-): ElementDefinition {
-	log.debug({
-		elementName,
-		filePath,
-		fn: 'traceReExport',
-	}, 'Tracing re-export');
-
-	// Use cached parsing
-	const ast = getOrParseFile(filePath);
-	if (!ast) {
-		log.warn({
-			path: filePath,
-			fn:   'traceReExport',
-		}, 'Failed to parse re-export file');
-
-		return { type: 'unknown' };
-	}
-
-	let result: ElementDefinition = { type: 'unknown' };
-
-	traverse(ast, {
-		Program(programPath) {
-			// Continue tracing in the re-exported file
-			result = traceElementDefinition(elementName, programPath.scope, filePath, visitedFiles);
-			programPath.stop();
-		},
-	});
-
-	return result;
-}
-
-
-// Helper function to get or parse a file with caching
-function getOrParseFile(filePath: string): t.File | undefined {
-	// Check cache first
-	if (fileCache.has(filePath)) {
-		log.trace({
-			path: filePath,
-			fn:   'getOrParseFile',
-		}, 'Using cached AST');
-
-		return fileCache.get(filePath)!;
-	}
-
-	// File not in cache, parse it
-	if (!existsSync(filePath)) {
-		log.warn({
-			path: filePath,
-			fn:   'getOrParseFile',
-		}, 'File does not exist');
-
-		return;
-	}
-
-	const fileContent = readFileSync(filePath, 'utf-8');
-
-	try {
-		const ast = babel.parseSync(fileContent, {
-			filename:   filePath,
-			parserOpts: {
-				plugins: plugins.values().toArray(),
 			},
 		});
 
-		if (ast) {
-			log.trace({
+		this.log.debug({
+			element:    elementName,
+			resultType: result.type,
+			fn:         'checkForReExports',
+		}, 'Re-export check completed');
+
+		return result;
+	}
+
+	protected traceReExport(
+		elementName: string,
+		filePath: string,
+	): ElementDefinition {
+		this.log.debug({
+			elementName,
+			filePath,
+			fn: 'traceReExport',
+		}, 'Tracing re-export');
+
+		// Use cached parsing
+		const ast = this.getOrParseFile(filePath);
+		if (!ast) {
+			this.log.warn({
+				path: filePath,
+				fn:   'traceReExport',
+			}, 'Failed to parse re-export file');
+
+			return { type: 'unknown' };
+		}
+
+		let result: ElementDefinition = { type: 'unknown' };
+
+		traverse(ast, {
+			Program: (programPath) => {
+				// Continue tracing in the re-exported file
+				result = this.traceElementDefinition(elementName, programPath.scope, filePath);
+				programPath.stop();
+			},
+		});
+
+		return result;
+	}
+
+	// Helper function to get or parse a file with caching
+	protected getOrParseFile(filePath: string): t.File | undefined {
+		// Check cache first
+		if (ImportDiscovery.fileCache.has(filePath)) {
+			this.log.trace({
 				path: filePath,
 				fn:   'getOrParseFile',
-			}, 'Parsed and cached file');
+			}, 'Using cached AST');
 
-			fileCache.set(filePath, ast);
+			return ImportDiscovery.fileCache.get(filePath)!;
+		}
 
-			return ast;
+		// File not in cache, parse it
+		if (!existsSync(filePath)) {
+			this.log.warn({
+				path: filePath,
+				fn:   'getOrParseFile',
+			}, 'File does not exist');
+
+			return;
+		}
+
+		const fileContent = readFileSync(filePath, 'utf-8');
+
+		try {
+			const ast = babel.parseSync(fileContent, {
+				filename:   filePath,
+				parserOpts: {
+					plugins: babelPlugins,
+				},
+			});
+
+			if (ast) {
+				this.log.trace({
+					path: filePath,
+					fn:   'getOrParseFile',
+				}, 'Parsed and cached file');
+
+				ImportDiscovery.fileCache.set(filePath, ast);
+
+				return ast;
+			}
+		}
+		catch (error) {
+			this.log.error({
+				path:  filePath,
+				error: String(error),
+				fn:    'getOrParseFile',
+			}, 'Failed to parse file');
 		}
 	}
-	catch (error) {
-		log.error({
-			path:  filePath,
-			error: String(error),
-			fn:    'getOrParseFile',
-		}, 'Failed to parse file');
+
+	// Helper function to check if a call expression is a toComponent/toTag call
+	// even if the function has been renamed through imports
+	protected isToComponentOrTagCall(
+		callExpr: t.CallExpression,
+		scope: Scope,
+	): boolean {
+		if (!t.isIdentifier(callExpr.callee))
+			return false;
+
+		const functionName = callExpr.callee.name;
+
+		// Check direct names first (fast path)
+		if (functionName === 'toComponent' || functionName === 'toTag') {
+			this.log.trace({
+				function: functionName,
+				fn:       'isToComponentOrTagCall',
+			}, 'Found direct function call');
+
+			return true;
+		}
+
+		// Check if this identifier is bound to an import that originally was toComponent/toTag
+		const binding = scope.getBinding(functionName);
+		if (!binding || binding.kind !== 'module')
+			return false;
+
+		if (!t.isImportSpecifier(binding.path.node))
+			return false;
+
+		const importSpecifier = binding.path.node;
+		const originalImportedName = t.isIdentifier(importSpecifier.imported)
+			? importSpecifier.imported.name
+			: importSpecifier.imported.value;
+
+		// Check if the original imported name was toComponent or toTag
+		const isOriginallyToComponentOrTag =
+				originalImportedName === 'toComponent'
+			|| originalImportedName === 'toTag';
+
+		if (isOriginallyToComponentOrTag) {
+			this.log.trace({
+				originalName: originalImportedName,
+				localName:    functionName,
+				fn:           'isToComponentOrTagCall',
+			}, 'Found renamed function call');
+		}
+
+		return isOriginallyToComponentOrTag;
 	}
+
 }
 
 
-// Helper function to check if a call expression is a toComponent/toTag call
-// even if the function has been renamed through imports
-function isToComponentOrTagCall(
-	callExpr: t.CallExpression,
-	scope: Scope,
-): boolean {
-	if (!t.isIdentifier(callExpr.callee))
-		return false;
+//export function findElementDefinition(
+//	path: NodePath<t.JSXOpeningElement>,
+//	config?: ImportDiscoveryConfig,
+//): ElementDefinition {
+//	console.time('findElementDefinition');
+//	const discovery = new ImportDiscovery(config);
 
-	const functionName = callExpr.callee.name;
+//	const result = discovery.findElementDefinition(path);
+//	console.timeEnd('findElementDefinition');
 
-	// Check direct names first (fast path)
-	if (functionName === 'toComponent' || functionName === 'toTag') {
-		log.trace({
-			function: functionName,
-			fn:       'isToComponentOrTagCall',
-		}, 'Found direct function call');
+//	return result;
+//}
 
-		return true;
-	}
+const discovery = new ImportDiscovery();
+export const findElementDefinition = (path: NodePath<t.JSXOpeningElement>): ElementDefinition => {
+	console.time('findElementDefinition');
 
-	// Check if this identifier is bound to an import that originally was toComponent/toTag
-	const binding = scope.getBinding(functionName);
-	if (!binding || binding.kind !== 'module')
-		return false;
+	const result = discovery.findElementDefinition(path);
 
-	if (!t.isImportSpecifier(binding.path.node))
-		return false;
+	console.timeEnd('findElementDefinition');
 
-	const importSpecifier = binding.path.node;
-	const originalImportedName = t.isIdentifier(importSpecifier.imported)
-		? importSpecifier.imported.name
-		: importSpecifier.imported.value;
-
-	// Check if the original imported name was toComponent or toTag
-	const isOriginallyToComponentOrTag =
-			originalImportedName === 'toComponent'
-		|| originalImportedName === 'toTag';
-
-	if (isOriginallyToComponentOrTag) {
-		log.trace({
-			originalName: originalImportedName,
-			localName:    functionName,
-			fn:           'isToComponentOrTagCall',
-		}, 'Found renamed function call');
-	}
-
-	return isOriginallyToComponentOrTag;
-}
+	return result;
+};

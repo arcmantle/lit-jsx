@@ -5,13 +5,10 @@ import { isMathmlTag } from '../shared/mathml-tags.js';
 import { isSvgTag } from '../shared/svg-tags.js';
 import type { ProcessorContext } from './attribute-processor.js';
 import { COMPONENT_POSTFIX, ERROR_MESSAGES, SOURCES, VARIABLES } from './config.js';
+import { findElementDefinition } from './import-discovery.js';
 
 
 export type Values<T> = T[keyof T];
-
-
-/** Cache over JSX component functions which are toJSX defined custom elements. */
-export const customElementNameMap: Map<string, Set<string>> = new Map();
 
 
 export const isComponent = (tagName: string): boolean => {
@@ -727,10 +724,8 @@ export const isJSXCustomElementComponent = (
 	if (tagName.endsWith(COMPONENT_POSTFIX))
 		return true;
 
-	const currentFileName = getPathFilename(path);
-	const customElementSet = customElementNameMap.get(currentFileName);
-
-	if (customElementSet?.has(tagName))
+	const type = findElementDefinition(path.get('openingElement'));
+	if (type.type === 'custom-element')
 		return true;
 
 	return false;

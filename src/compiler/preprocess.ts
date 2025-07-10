@@ -1,11 +1,10 @@
 import type { PluginPass } from '@babel/core';
 import type { NodePath, VisitNodeFunction } from '@babel/traverse';
-import type { JSXElement, JSXOpeningElement, Program } from '@babel/types';
+import type { JSXElement, Program } from '@babel/types';
 import { isJSXElement, isJSXIdentifier } from '@babel/types';
 import { isValidHTMLNesting } from 'validate-html-nesting';
 
-import { customElementNameMap, getPathFilename, isComponent } from './compiler-utils.js';
-import { findElementDefinition } from './import-discovery.js';
+import { isComponent } from './compiler-utils.js';
 
 
 const preprocessVisitors = {
@@ -34,22 +33,6 @@ const preprocessVisitors = {
 				);
 			}
 		}
-	},
-	// Discovers custom elements in JSX.
-	JSXOpeningElement(path: NodePath<JSXOpeningElement>) {
-		if (!path.node.name || !isJSXIdentifier(path.node.name))
-			return;
-
-		const result = findElementDefinition(path);
-		if (result.type !== 'custom-element')
-			return;
-
-		const currentFileName = getPathFilename(path);
-
-		const set = customElementNameMap.get(currentFileName)
-			?? customElementNameMap.set(currentFileName, new Set()).get(currentFileName)!;
-
-		set.add(path.node.name.name);
 	},
 };
 
