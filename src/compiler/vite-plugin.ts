@@ -25,7 +25,7 @@ import { deepmerge } from 'deepmerge-ts';
 import type { PluginOption } from 'vite';
 
 import { litJsxBabelPlugin } from './babel-plugin.js';
-import { babelLegacyPlugins, babelPlugins, debugMode } from './config.js';
+import { babelPlugins, debugMode } from './config.js';
 import { ImportDiscovery } from './import-discovery.js';
 
 
@@ -50,6 +50,15 @@ export const litJsx = (options: {
 	let projectRoot: string;
 
 	debugMode.value = !!options.debug;
+
+	if (options.legacyDecorators) {
+		babelPlugins.delete('decorators');
+		babelPlugins.delete('decoratorAutoAccessors');
+
+		babelPlugins.add('decorators-legacy');
+	}
+
+	const finalBabelPlugins = Array.from(babelPlugins);
 
 	return {
 		name:   'lit-jsx-preserve',
@@ -91,7 +100,7 @@ export const litJsx = (options: {
 					configFile:     false,
 					babelrc:        false,
 					parserOpts:     {
-						plugins: options.legacyDecorators ? babelLegacyPlugins : babelPlugins,
+						plugins: finalBabelPlugins,
 					},
 				};
 

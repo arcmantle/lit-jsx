@@ -2,7 +2,7 @@ import babel from '@babel/core';
 import { bench } from 'vitest';
 
 import { litJsxBabelPlugin } from '../src/compiler/babel-plugin.ts';
-import type { BabelPlugins } from './utils.ts';
+import { babelPlugins } from '../src/compiler/config.ts';
 
 
 const getOpts = (): babel.TransformOptions => ({
@@ -15,7 +15,7 @@ const getOpts = (): babel.TransformOptions => ({
 	configFile:     false,
 	babelrc:        false,
 	parserOpts:     {
-		plugins: [ 'jsx', 'typescript' ] satisfies BabelPlugins,
+		plugins: Array.from(babelPlugins),
 	},
 });
 

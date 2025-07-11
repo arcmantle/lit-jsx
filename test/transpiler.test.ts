@@ -19,7 +19,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		configFile:     false,
 		babelrc:        false,
 		parserOpts:     {
-			plugins: babelPlugins,
+			plugins: Array.from(babelPlugins),
 		},
 	});
 

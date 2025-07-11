@@ -164,7 +164,7 @@ export class ImportDiscovery {
 			ast = babel.parseSync(fileContent, {
 				filename:   filePath,
 				parserOpts: {
-					plugins: babelPlugins,
+					plugins: Array.from(babelPlugins),
 				},
 			})!;
 		}
