@@ -80,7 +80,7 @@ suite('Import Discovery Tests', () => {
 		// export { v as BadgeCmp };
 
 		const source = `
-			import { BadgeCmp } from './import-discovery/minified-example.ts';
+			import { BadgeCmp } from './import-discovery/minified-entry.ts';
 
 			const template = (
 				<BadgeCmp />

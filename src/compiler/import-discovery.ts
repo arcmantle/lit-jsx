@@ -56,20 +56,19 @@ class ImportDiscovery {
 		this.visitedFiles.clear();
 		this.log ??= createLogger('import-discovery', debugMode.value);
 
-		const elementName = path.node.name;
-		const currentFileName = getPathFilename(path);
+		const cacheKey = this.getCallSiteKey(path);
+		if (ImportDiscovery.definitionCache.has(cacheKey))
+			return ImportDiscovery.definitionCache.get(cacheKey)!;
 
-		// Only handle JSXIdentifier (not JSXMemberExpression or JSXNamespacedName)
+		const elementName = path.node.name;
+
 		if (!t.isJSXIdentifier(elementName))
 			return { type: 'unknown' };
 
 		if (!isComponent(elementName.name))
 			return { type: 'unknown' };
 
-		const cacheKey = this.getCallSiteKey(elementName.name, path);
-		if (ImportDiscovery.definitionCache.has(cacheKey))
-			return ImportDiscovery.definitionCache.get(cacheKey)!;
-
+		const currentFileName = getPathFilename(path);
 		const result = this.traceElementDefinition(elementName.name, path.scope, currentFileName);
 
 		ImportDiscovery.definitionCache.set(cacheKey, result);
@@ -78,30 +77,50 @@ class ImportDiscovery {
 	}
 
 	// Generate a unique cache key for each call site
-	protected getCallSiteKey(
-		elementName: string,
-		path: NodePath<t.JSXOpeningElement>,
-	): string {
+	protected getCallSiteKey(path: NodePath<t.JSXOpeningElement>): string {
 		const filename = getPathFilename(path);
-		const node = path.node;
+		const start = path.node.start;
 
-		// Fast path: Use byte positions (most common case)
-		if (typeof node.start === 'number')
-			return `${ filename }:${ node.start }:${ elementName }`;
+		if (typeof start !== 'number')
+			throw new Error(`Invalid start position for JSX element in ${ filename }`);
 
-		// Fallback to line/column only if start position unavailable
-		if (node.loc)
-			return `${ filename }:${ node.loc.start.line }:${ node.loc.start.column }:${ elementName }`;
+		return `${ filename }:${ start }`;
+	}
 
-		// Last resort: use path structure
-		const pathKeys = [];
-		let current: NodePath = path;
-		while (current.parent) {
-			pathKeys.unshift(`${ current.key }:${ current.listKey || '' }`);
-			current = current.parentPath!;
+	protected traceElementDefinition(
+		elementName: string,
+		scope: Scope,
+		currentFileName: string,
+	): ElementDefinition {
+		const traceKey = `${ currentFileName }:${ elementName }`;
+
+		// Prevent infinite recursion
+		if (this.visitedFiles.has(traceKey))
+			return { type: 'unknown' };
+
+		this.visitedFiles.add(traceKey);
+
+		// Use batched file analysis
+		const fileBindings = this.analyzeFileBindings(currentFileName);
+
+		// Check if we have this element in our batch analysis
+		if (fileBindings.has(elementName)) {
+			const definition = fileBindings.get(elementName)!;
+
+			// Resolve any lazy references
+			return this.resolveLazyDefinition(definition);
 		}
 
-		return `${ filename }:${ pathKeys.join('/') }:${ elementName }`;
+		// Fallback to scope-based lookup for dynamic cases
+		const binding = scope.getBinding(elementName);
+		if (!binding)
+			return { type: 'unknown' };
+
+		// Use the fast analysis methods
+		const result = this.analyzeBindingFast(binding, currentFileName);
+
+		// Resolve any lazy references (imports, local references)
+		return this.resolveLazyDefinition(result);
 	}
 
 	// New method: Analyze all relevant bindings in a file at once
@@ -277,42 +296,6 @@ class ImportDiscovery {
 				}
 			});
 		});
-	}
-
-	protected traceElementDefinition(
-		elementName: string,
-		scope: Scope,
-		currentFileName: string,
-	): ElementDefinition {
-		const traceKey = `${ currentFileName }:${ elementName }`;
-
-		// Prevent infinite recursion
-		if (this.visitedFiles.has(traceKey))
-			return { type: 'unknown' };
-
-		this.visitedFiles.add(traceKey);
-
-		// Use batched file analysis
-		const fileBindings = this.analyzeFileBindings(currentFileName);
-
-		// Check if we have this element in our batch analysis
-		if (fileBindings.has(elementName)) {
-			const definition = fileBindings.get(elementName)!;
-
-			// Resolve any lazy references
-			return this.resolveLazyDefinition(definition);
-		}
-
-		// Fallback to scope-based lookup for dynamic cases
-		const binding = scope.getBinding(elementName);
-		if (!binding)
-			return { type: 'unknown' };
-
-		// Use the fast analysis methods
-		const result = this.analyzeBindingFast(binding, currentFileName);
-
-		// Resolve any lazy references (imports, local references)
-		return this.resolveLazyDefinition(result);
 	}
 
 	// Resolve lazy definitions (imports, references)
