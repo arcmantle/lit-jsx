@@ -4,7 +4,7 @@ import * as t from '@babel/types';
 import { isMathmlTag } from '../shared/mathml-tags.js';
 import { isSvgTag } from '../shared/svg-tags.js';
 import type { ProcessorContext } from './attribute-processor.js';
-import { COMPONENT_POSTFIX, ERROR_MESSAGES, SOURCES, VARIABLES } from './config.js';
+import { ERROR_MESSAGES, SOURCES, VARIABLES } from './config.js';
 import { findElementDefinition } from './import-discovery.js';
 
 
@@ -337,9 +337,6 @@ export class Ensure {
 	): t.Identifier {
 		EnsureImport.literalMap(program, path);
 
-		variableName = variableName.replace(COMPONENT_POSTFIX, '');
-		tagName = tagName.replace(COMPONENT_POSTFIX, '');
-
 		return this.componentTagDeclaration(
 			path,
 			tagName,
@@ -352,7 +349,6 @@ export class Ensure {
 						t.identifier('get'),
 					),
 					[ t.identifier(tagName) ],
-					//[ t.identifier(tagName + COMPONENT_POSTFIX) ],
 				),
 			),
 		);
@@ -712,7 +708,7 @@ export const isJSXCustomElementComponent = (
 	path: NodePath<t.JSXElement | t.JSXFragment>,
 ): boolean => {
 	const node = path.node;
-	// If it's a fragment, we cannot determine the tag name.
+
 	if (t.isJSXFragment(node))
 		return false;
 
@@ -720,9 +716,6 @@ export const isJSXCustomElementComponent = (
 
 	if (!isComponent(tagName))
 		return false;
-
-	if (tagName.endsWith(COMPONENT_POSTFIX))
-		return true;
 
 	const type = findElementDefinition(path.get('openingElement'));
 	if (type.type === 'custom-element')
@@ -736,19 +729,17 @@ export const isJSXFunctionElementComponent = (
 	path: NodePath<t.JSXElement | t.JSXFragment>,
 ): boolean => {
 	const node = path.node;
-	// If it's a fragment, we cannot determine the tag name.
+
 	if (t.isJSXFragment(node))
 		return false;
 
 	const tagName: string = getJSXElementName(node);
 
-	if (isJSXCustomElementComponent(path))
-		return false;
-
 	if (!isComponent(tagName))
 		return false;
 
-	if (tagName.endsWith(COMPONENT_POSTFIX))
+	const type = findElementDefinition(path.get('openingElement'));
+	if (type.type === 'custom-element')
 		return false;
 
 	return true;

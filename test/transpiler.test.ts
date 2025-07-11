@@ -3,7 +3,7 @@
 import * as babel from '@babel/core';
 import { suite, test } from 'vitest';
 
-import { litJsxBabelPreset } from '../src/compiler/babel-preset.ts';
+import { litJsxBabelPlugin } from '../src/compiler/babel-plugin.ts';
 import { type BabelPlugins, dedent } from './utils.ts';
 
 
@@ -12,18 +12,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		root:           '.',
 		filename:       'test.tsx',
 		sourceFileName: 'test.tsx',
-		presets:        [
-			[
-				litJsxBabelPreset,
-				{},
-			],
-		],
-		plugins:    [],
-		ast:        false,
-		sourceMaps: true,
-		configFile: false,
-		babelrc:    false,
-		parserOpts: {
+		plugins:        [ litJsxBabelPlugin() ],
+		ast:            false,
+		sourceMaps:     true,
+		configFile:     false,
+		babelrc:        false,
+		parserOpts:     {
 			plugins: [ 'jsx', 'typescript' ] satisfies BabelPlugins,
 		},
 	});
@@ -1249,10 +1243,10 @@ suite('JSX to Lit Transpiler Tests', () => {
 					</thead>
 					<tbody>
 						{users.map(user => (
-							<TableRow.tag key={user.id}>
-								<TableCell.tag>{user.name}</TableCell.tag>
-								<TableCell.tag>{user.age}</TableCell.tag>
-								<TableCell.tag>
+							<TableRow key={user.id}>
+								<TableCell>{user.name}</TableCell>
+								<TableCell>{user.age}</TableCell>
+								<TableCell>
 									<ActionButton
 										onClick={prop => () => editUser(user.id)}
 										icon="edit"
@@ -1262,8 +1256,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 										icon="delete"
 										variant="danger"
 									/>
-								</TableCell.tag>
-							</TableRow.tag>
+								</TableCell>
+							</TableRow>
 						))}
 					</tbody>
 				</table>

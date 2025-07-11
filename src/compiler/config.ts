@@ -2,11 +2,10 @@ export type BabelPlugins = NonNullable<NonNullable<babel.TransformOptions['parse
 
 
 export const babelPlugins: BabelPlugins = [ 'jsx', 'typescript', 'decorators', 'decoratorAutoAccessors' ];
-export const debugMode = { value: true };
+export const debugMode = { value: false };
 
 
 export const COMPONENT_LITERAL_PREFIX = '__$';
-export const COMPONENT_POSTFIX = '.tag';
 export const WHITESPACE_TAGS: string[] = [ 'pre', 'textarea' ];
 export const SPECIAL_TAGS: string[] = [];
 export const ATTR_NAMES = {
