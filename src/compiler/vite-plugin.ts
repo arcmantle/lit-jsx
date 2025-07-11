@@ -25,7 +25,7 @@ import { deepmerge } from 'deepmerge-ts';
 import type { PluginOption } from 'vite';
 
 import { litJsxBabelPlugin } from './babel-plugin.js';
-import { babelPlugins, debugMode } from './config.js';
+import { babelLegacyPlugins, babelPlugins, debugMode } from './config.js';
 import { ImportDiscovery } from './import-discovery.js';
 
 
@@ -40,7 +40,8 @@ import { ImportDiscovery } from './import-discovery.js';
  * @returns Vite plugin configuration
  */
 export const litJsx = (options: {
-	debug?: boolean; // Enable debug mode for additional logging
+	legacyDecorators?: boolean; // Enable legacy decorators support
+	debug?:            boolean; // Enable debug mode for additional logging
 	/** Options for the Babel transform */
 	babel?:
 		| babel.TransformOptions
@@ -90,7 +91,7 @@ export const litJsx = (options: {
 					configFile:     false,
 					babelrc:        false,
 					parserOpts:     {
-						plugins: babelPlugins,
+						plugins: options.legacyDecorators ? babelLegacyPlugins : babelPlugins,
 					},
 				};
 
