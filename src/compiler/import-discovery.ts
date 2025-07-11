@@ -14,7 +14,7 @@ import { createLogger } from './create-logger.ts';
 
 
 export interface ElementDefinition {
-	type:            'custom-element' | 'import' | 'local-variable' | 'unknown';
+	type:            'custom-element' | 'import' | 'local-variable' | 'wildcard-export' | 'unknown';
 	source?:         string;
 	originalName?:   string;
 	localName?:      string;
@@ -26,6 +26,7 @@ export interface ElementDefinition {
 interface FileSystemAdapter {
 	existsSync:   (path: string) => boolean;
 	readFileSync: (path: string, encoding: 'utf-8') => string;
+	dirname:      (path: string) => string;
 }
 
 interface ResolverAdapter {
@@ -33,60 +34,81 @@ interface ResolverAdapter {
 }
 
 
-class ImportDiscovery {
+export class ImportDiscovery {
 
-	static readonly fileCache:         Map<string, t.File> = new Map();
-	static readonly definitionCache:   Map<string, ElementDefinition> = new Map();
-	static readonly fileBindingsCache: Map<string, Map<string, ElementDefinition>> = new Map();
+	static readonly definitionCache:   Map<string, Map<string, ElementDefinition>> = new Map();
+	static readonly fileBindingsCache: Map<string, ReadonlyMap<string, ElementDefinition>> = new Map();
+	static readonly fileDependencies:  Map<string, Set<string>> = new Map();
+	static readonly EMPTY_BINDINGS:    ReadonlyMap<string, ElementDefinition> = new Map();
 
-	// Add cache clearing method
-	static clearFileBindingsCache(): void {
-		ImportDiscovery.fileBindingsCache.clear();
+	static clearCacheForFileAndDependents(changedFilePath: string): void {
+		// Clear the changed file itself
+		ImportDiscovery.definitionCache.delete(changedFilePath);
+		ImportDiscovery.fileBindingsCache.delete(changedFilePath);
+		ImportDiscovery.fileDependencies.delete(changedFilePath);
+
+		// Find and clear all files that depend on the changed file in one pass
+		for (const [ file, dependencies ] of ImportDiscovery.fileDependencies) {
+			if (!dependencies.has(changedFilePath))
+				continue;
+
+			ImportDiscovery.definitionCache.delete(file);
+			ImportDiscovery.fileBindingsCache.delete(file);
+			ImportDiscovery.fileDependencies.delete(file);
+		}
 	}
 
 	protected readonly visitedFiles: Set<string> = new Set();
+	protected readonly resolver:     ResolverAdapter;
+	protected readonly log:          Logger<never, boolean>;
+	protected readonly fs:           FileSystemAdapter;
 
-	protected fs:       FileSystemAdapter = { existsSync, readFileSync };
-	protected resolver: ResolverAdapter = oxcResolver;
-	protected log:      Logger<never, boolean>;
+	constructor() {
+		this.resolver = oxcResolver;
+		this.log      = createLogger('import-discovery', debugMode.value);
+		this.fs       = { existsSync, readFileSync, dirname };
+	}
 
+	/**
+	 * Finds the definition of a JSX element in the given path.
+	 */
 	findElementDefinition(
 		path: NodePath<t.JSXOpeningElement>,
 	): ElementDefinition {
 		this.visitedFiles.clear();
-		this.log ??= createLogger('import-discovery', debugMode.value);
 
-		const cacheKey = this.getCallSiteKey(path);
-		if (ImportDiscovery.definitionCache.has(cacheKey))
-			return ImportDiscovery.definitionCache.get(cacheKey)!;
+		const filePath = getPathFilename(path);
+		const cacheKey = String(path.node.start);
 
-		const elementName = path.node.name;
+		const fileCache = ImportDiscovery.definitionCache.get(filePath);
+		if (fileCache) {
+			const cached = fileCache.get(cacheKey);
+			if (cached)
+				return cached;
+		}
 
-		if (!t.isJSXIdentifier(elementName))
+		if (!t.isJSXIdentifier(path.node.name))
 			return { type: 'unknown' };
 
-		if (!isComponent(elementName.name))
+		const elementName = path.node.name.name;
+		if (!isComponent(elementName))
 			return { type: 'unknown' };
 
 		const currentFileName = getPathFilename(path);
-		const result = this.traceElementDefinition(elementName.name, path.scope, currentFileName);
+		const result = this.traceElementDefinition(elementName, path.scope, currentFileName);
 
-		ImportDiscovery.definitionCache.set(cacheKey, result);
+		// Store in file-specific cache
+		const definitionCache = ImportDiscovery.definitionCache.get(filePath)
+			?? ImportDiscovery.definitionCache
+				.set(filePath, new Map())
+				.get(filePath)!;
+
+		definitionCache.set(cacheKey, result);
 
 		return result;
 	}
 
-	// Generate a unique cache key for each call site
-	protected getCallSiteKey(path: NodePath<t.JSXOpeningElement>): string {
-		const filename = getPathFilename(path);
-		const start = path.node.start;
-
-		if (typeof start !== 'number')
-			throw new Error(`Invalid start position for JSX element in ${ filename }`);
-
-		return `${ filename }:${ start }`;
-	}
-
+	// Trace the element definition recursively
 	protected traceElementDefinition(
 		elementName: string,
 		scope: Scope,
@@ -123,48 +145,70 @@ class ImportDiscovery {
 		return this.resolveLazyDefinition(result);
 	}
 
-	// New method: Analyze all relevant bindings in a file at once
-	protected analyzeFileBindings(filePath: string): Map<string, ElementDefinition> {
-		// Check cache first
-		if (ImportDiscovery.fileBindingsCache.has(filePath))
-			return ImportDiscovery.fileBindingsCache.get(filePath)!;
+	// Analyze all relevant bindings in a file at once
+	protected analyzeFileBindings(filePath: string): ReadonlyMap<string, ElementDefinition> {
+		const fileBinding = ImportDiscovery.fileBindingsCache.get(filePath);
+		if (fileBinding)
+			return fileBinding;
 
-		const ast = this.getOrParseFile(filePath);
-		if (!ast) {
-			const emptyMap: Map<string, ElementDefinition> = new Map();
-			ImportDiscovery.fileBindingsCache.set(filePath, emptyMap);
+		if (!this.fs.existsSync(filePath)) {
+			ImportDiscovery.fileBindingsCache.set(filePath, ImportDiscovery.EMPTY_BINDINGS);
 
-			return emptyMap;
+			return ImportDiscovery.EMPTY_BINDINGS;
 		}
+
+		const fileContent = this.fs.readFileSync(filePath, 'utf-8');
+		let ast: t.File;
+
+		try {
+			ast = babel.parseSync(fileContent, {
+				filename:   filePath,
+				parserOpts: {
+					plugins: babelPlugins,
+				},
+			})!;
+		}
+		catch (error) {
+			// Failed to parse, cache empty result
+			ImportDiscovery.fileBindingsCache.set(filePath, ImportDiscovery.EMPTY_BINDINGS);
+
+			return ImportDiscovery.EMPTY_BINDINGS;
+		}
+
+		let programPath: babel.NodePath<babel.types.Program> = undefined as any;
+		traverse(ast, { Program(path) { programPath = path; path.stop(); } });
 
 		const bindings: Map<string, ElementDefinition> = new Map();
 
-		// Single traversal to collect ALL component-related info
-		traverse(ast, {
-			Program: (programPath) => {
-				// 1. Analyze all relevant local bindings at once
-				Object.entries(programPath.scope.bindings).forEach(([ name, binding ]) => {
-					// Skip function/import bindings that are clearly not component-related
-					if (binding.kind === 'module' || binding.kind === 'hoisted') {
-						if (!isComponent(name))
-							return;
-					}
+		// 1. Analyze all relevant local bindings at once
+		this.analyzeFileDeclarations(programPath, filePath, bindings);
 
-					const definition = this.analyzeBindingFast(binding, filePath);
-					if (definition.type !== 'unknown')
-						bindings.set(name, definition);
-				});
+		// 2. Analyze all exports at once
+		this.analyzeFileExports(programPath, filePath, bindings);
 
-				// 2. Analyze all exports at once
-				this.analyzeExports(programPath, filePath, bindings);
+		const readonlyBindings = new Map(bindings) as ReadonlyMap<string, ElementDefinition>;
+		ImportDiscovery.fileBindingsCache.set(filePath, readonlyBindings);
 
-				programPath.stop(); // We only need the Program level
-			},
-		});
+		return readonlyBindings;
+	}
 
-		ImportDiscovery.fileBindingsCache.set(filePath, bindings);
+	// Resolve lazy references in the definition
+	protected analyzeFileDeclarations(
+		programPath: babel.NodePath<babel.types.Program>,
+		filePath: string,
+		bindings: Map<string, ElementDefinition>,
+	): void {
+		for (const [ name, binding ] of Object.entries(programPath.scope.bindings)) {
+			// Skip function/import bindings that are clearly not component-related
+			if (binding.kind === 'module' || binding.kind === 'hoisted') {
+				if (!isComponent(name))
+					continue;
+			}
 
-		return bindings;
+			const definition = this.analyzeBindingFast(binding, filePath);
+			if (definition.type !== 'unknown')
+				bindings.set(name, definition);
+		}
 	}
 
 	// Fast binding analysis without deep traversal
@@ -251,128 +295,6 @@ class ImportDiscovery {
 		return { type: 'local-variable' };
 	}
 
-	// Analyze all exports in one pass
-	protected analyzeExports(
-		programPath: babel.NodePath<babel.types.Program>,
-		filePath: string,
-		bindings: Map<string, ElementDefinition>,
-	): void {
-		programPath.node.body.forEach(statement => {
-			if (!t.isExportNamedDeclaration(statement))
-				return;
-
-			statement.specifiers.forEach(specifier => {
-				if (!t.isExportSpecifier(specifier))
-					return;
-
-				const exportedName = t.isIdentifier(specifier.exported)
-					? specifier.exported.name
-					: specifier.exported.value;
-
-				const localName = specifier.local.name;
-
-				if (!isComponent(exportedName))
-					return;
-
-				// For re-exports with source
-				if (statement.source) {
-					const definition = {
-						type:         'import' as const,
-						source:       statement.source.value,
-						originalName: localName,
-						localName:    exportedName,
-					};
-					bindings.set(exportedName, definition);
-				}
-				else {
-					// For local exports, reference the local binding
-					const definition = {
-						type:           'local-variable' as const,
-						source:         filePath,
-						referencedName: localName,
-						localName:      exportedName,
-					};
-					bindings.set(exportedName, definition);
-				}
-			});
-		});
-	}
-
-	// Resolve lazy definitions (imports, references)
-	protected resolveLazyDefinition(definition: ElementDefinition): ElementDefinition {
-		if (definition.type === 'import' && definition.resolvedPath && definition.originalName) {
-			// Recursively analyze the imported file
-			const importedBindings = this.analyzeFileBindings(definition.resolvedPath);
-			const binding = importedBindings.get(definition.originalName);
-
-			if (binding) // Recursively resolve the found definition
-				return this.resolveLazyDefinition(binding);
-		}
-
-		if (definition.type === 'local-variable' && definition.referencedName && definition.source) {
-			// Resolve local references
-			const fileBindings = this.analyzeFileBindings(definition.source);
-			const binding = fileBindings.get(definition.referencedName);
-
-			if (binding)
-				return this.resolveLazyDefinition(binding);
-		}
-
-		return definition;
-	}
-
-	// Helper function to get or parse a file with caching
-	protected getOrParseFile(filePath: string): t.File | undefined {
-		// Check cache first
-		if (ImportDiscovery.fileCache.has(filePath)) {
-			//this.log.trace({
-			//	path: filePath,
-			//	fn:   'getOrParseFile',
-			//}, 'Using cached AST');
-
-			return ImportDiscovery.fileCache.get(filePath)!;
-		}
-
-		// File not in cache, parse it
-		if (!this.fs.existsSync(filePath)) {
-			//this.log.warn({
-			//	path: filePath,
-			//	fn:   'getOrParseFile',
-			//}, 'File does not exist');
-
-			return;
-		}
-
-		const fileContent = this.fs.readFileSync(filePath, 'utf-8');
-
-		try {
-			const ast = babel.parseSync(fileContent, {
-				filename:   filePath,
-				parserOpts: {
-					plugins: babelPlugins,
-				},
-			});
-
-			if (ast) {
-				//this.log.trace({
-				//	path: filePath,
-				//	fn:   'getOrParseFile',
-				//}, 'Parsed and cached file');
-
-				ImportDiscovery.fileCache.set(filePath, ast);
-
-				return ast;
-			}
-		}
-		catch (error) {
-			//this.log.error({
-			//	path:  filePath,
-			//	error: String(error),
-			//	fn:    'getOrParseFile',
-			//}, 'Failed to parse file');
-		}
-	}
-
 	// Helper function to check if a call expression is a toComponent/toTag call
 	// even if the function has been renamed through imports
 	protected isToComponentOrTagCall(
@@ -385,14 +307,8 @@ class ImportDiscovery {
 		const functionName = callExpr.callee.name;
 
 		// Check direct names first (fast path)
-		if (functionName === 'toComponent' || functionName === 'toTag') {
-			//this.log.trace({
-			//	function: functionName,
-			//	fn:       'isToComponentOrTagCall',
-			//}, 'Found direct function call');
-
+		if (functionName === 'toComponent' || functionName === 'toTag')
 			return true;
-		}
 
 		// Check if this identifier is bound to an import that originally was toComponent/toTag
 		const binding = scope.getBinding(functionName);
@@ -412,20 +328,133 @@ class ImportDiscovery {
 				originalImportedName === 'toComponent'
 			|| originalImportedName === 'toTag';
 
-		if (isOriginallyToComponentOrTag) {
-			//this.log.trace({
-			//	originalName: originalImportedName,
-			//	localName:    functionName,
-			//	fn:           'isToComponentOrTagCall',
-			//}, 'Found renamed function call');
-		}
-
 		return isOriginallyToComponentOrTag;
 	}
 
+	// Analyze all exports in one pass
+	protected analyzeFileExports(
+		programPath: babel.NodePath<babel.types.Program>,
+		filePath: string,
+		bindings: Map<string, ElementDefinition>,
+	): void {
+		for (const statement of programPath.node.body) {
+			// Handle named exports: export { X } from './file' or export { X }
+			if (t.isExportNamedDeclaration(statement)) {
+				for (const specifier of statement.specifiers) {
+					if (!t.isExportSpecifier(specifier))
+						continue;
+
+					const exportedName = t.isIdentifier(specifier.exported)
+						? specifier.exported.name
+						: specifier.exported.value;
+
+					const localName = specifier.local.name;
+
+					if (!isComponent(exportedName))
+						continue;
+
+					// For re-exports with source
+					if (statement.source) {
+						const definition = {
+							type:         'import' as const,
+							source:       statement.source.value,
+							originalName: localName,
+							localName:    exportedName,
+						};
+						bindings.set(exportedName, definition);
+					}
+					else {
+						// For local exports, reference the local binding
+						const definition = {
+							type:           'local-variable' as const,
+							source:         filePath,
+							referencedName: localName,
+							localName:      exportedName,
+						};
+						bindings.set(exportedName, definition);
+					}
+				}
+			}
+			// Handle wildcard exports: export * from './file'
+			else if (t.isExportAllDeclaration(statement) && statement.source) {
+				// For wildcard exports, we need to mark this as a wildcard re-export
+				// The actual resolution will happen in resolveLazyDefinition
+				const definition = {
+					type:   'wildcard-export' as const,
+					source: statement.source.value,
+				};
+				// Store with a special key to indicate wildcard export
+				bindings.set('*', definition);
+			}
+		}
+	}
+
+	// Resolve lazy definitions (imports, references)
+	protected resolveLazyDefinition(definition: ElementDefinition): ElementDefinition {
+		if (definition.type === 'import' && definition.resolvedPath && definition.originalName) {
+			if (definition.source) {
+				const currentFile = definition.source;
+				const dependsOn = definition.resolvedPath;
+
+				let fileDependencies = ImportDiscovery.fileDependencies.get(currentFile);
+				if (!fileDependencies) {
+					fileDependencies = new Set<string>();
+					ImportDiscovery.fileDependencies.set(currentFile, fileDependencies);
+				}
+
+				fileDependencies.add(dependsOn);
+			}
+
+			// Recursively analyze the imported file
+			const importedBindings = this.analyzeFileBindings(definition.resolvedPath);
+			const binding = importedBindings.get(definition.originalName);
+
+			if (binding) // Recursively resolve the found definition
+				return this.resolveLazyDefinition(binding);
+
+			// If specific export not found, check for wildcard exports
+			const wildcardExport = importedBindings.get('*');
+			if (wildcardExport && wildcardExport.type === 'wildcard-export') {
+				// Resolve the wildcard export by looking in the target file
+				const currentDir = this.fs.dirname(definition.resolvedPath);
+				const resolvedResult = this.resolver.sync(currentDir, wildcardExport.source!);
+				const resolvedPath = resolvedResult.path;
+
+				if (resolvedPath) {
+					// Create a new import definition for the wildcard target
+					const wildcardTargetDefinition: ElementDefinition = {
+						type:         'import',
+						source:       wildcardExport.source,
+						originalName: definition.originalName,
+						localName:    definition.localName,
+						resolvedPath: resolvedPath,
+					};
+
+					return this.resolveLazyDefinition(wildcardTargetDefinition);
+				}
+			}
+		}
+
+		if (definition.type === 'local-variable' && definition.referencedName && definition.source) {
+			// Resolve local references
+			const fileBindings = this.analyzeFileBindings(definition.source);
+			const binding = fileBindings.get(definition.referencedName);
+
+			if (binding)
+				return this.resolveLazyDefinition(binding);
+		}
+
+		return definition;
+	}
+
 }
-const discovery: ImportDiscovery = new ImportDiscovery();
 
 
-export const findElementDefinition: typeof discovery.findElementDefinition =
-	discovery.findElementDefinition.bind(discovery);
+let discovery: ImportDiscovery;
+export const findElementDefinition = (
+	...args: Parameters<ImportDiscovery['findElementDefinition']>
+): ReturnType<ImportDiscovery['findElementDefinition']> => {
+	discovery ??= new ImportDiscovery();
+
+	return discovery.findElementDefinition(...args);
+};

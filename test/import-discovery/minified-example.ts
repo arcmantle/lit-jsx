@@ -5,6 +5,8 @@ class Badge extends HTMLElement {
 
 	static tagName = 'my-badge';
 
+	accessor variant: 'default' = 'default';
+
 	constructor() {
 		super();
 	}

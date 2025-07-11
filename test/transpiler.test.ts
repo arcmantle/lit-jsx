@@ -4,7 +4,8 @@ import * as babel from '@babel/core';
 import { suite, test } from 'vitest';
 
 import { litJsxBabelPlugin } from '../src/compiler/babel-plugin.ts';
-import { type BabelPlugins, dedent } from './utils.ts';
+import { babelPlugins } from '../src/compiler/config.ts';
+import { dedent } from './utils.ts';
 
 
 suite('JSX to Lit Transpiler Tests', () => {
@@ -18,18 +19,18 @@ suite('JSX to Lit Transpiler Tests', () => {
 		configFile:     false,
 		babelrc:        false,
 		parserOpts:     {
-			plugins: [ 'jsx', 'typescript' ] satisfies BabelPlugins,
+			plugins: babelPlugins,
 		},
 	});
 
 	// ========== BASIC ELEMENT TESTS ==========
 
-	test('transforms empty fragment', async ({ expect }) => {
+	test('transforms empty fragment', ({ expect }) => {
 		const source = `
 			const template = <></>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -44,12 +45,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms div with static text content', async ({ expect }) => {
+	test('transforms div with static text content', ({ expect }) => {
 		const source = `
 		const template = <div>Static text content</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -64,12 +65,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms self-closing element', async ({ expect }) => {
+	test('transforms self-closing element', ({ expect }) => {
 		const source = `
 		const template = <input type="text" />;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -86,13 +87,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== EXPRESSION TESTS ==========
 
-	test('transforms element with single expression', async ({ expect }) => {
+	test('transforms element with single expression', ({ expect }) => {
 		const source = `
 		const name = 'World';
 		const template = <div>Hello {name}</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -111,14 +112,14 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with multiple expressions', async ({ expect }) => {
+	test('transforms element with multiple expressions', ({ expect }) => {
 		const source = `
 		const first = 'Hello';
 		const second = 'World';
 		const template = <div>{first} {second}</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -141,13 +142,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with complex expression', async ({ expect }) => {
+	test('transforms element with complex expression', ({ expect }) => {
 		const source = `
 		const user = { name: 'John', age: 30 };
 		const template = <div>User: {user.name} ({user.age} years old)</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -172,13 +173,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with conditional expression', async ({ expect }) => {
+	test('transforms element with conditional expression', ({ expect }) => {
 		const source = `
 		const isLoggedIn = true;
 		const template = <div>{isLoggedIn ? 'Welcome' : 'Please log in'}</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -199,12 +200,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== ATTRIBUTE TESTS ==========
 
-	test('transforms element with static attributes', async ({ expect }) => {
+	test('transforms element with static attributes', ({ expect }) => {
 		const source = `
 		const template = <div class="container" id="main">Content</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -219,13 +220,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with dynamic attribute', async ({ expect }) => {
+	test('transforms element with dynamic attribute', ({ expect }) => {
 		const source = `
 		const className = 'dynamic-class';
 		const template = <div class={className}>Content</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t, AttributePart } from "@arcmantle/lit-jsx";
@@ -247,13 +248,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with boolean attribute (arrow function)', async ({ expect }) => {
+	test('transforms element with boolean attribute (arrow function)', ({ expect }) => {
 		const source = `
 		const isDisabled = true;
 		const template = <button disabled={bool => isDisabled}>Click me</button>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t, BooleanPart } from "@arcmantle/lit-jsx";
@@ -275,13 +276,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with boolean attribute (as.bool)', async ({ expect }) => {
+	test('transforms element with boolean attribute (as.bool)', ({ expect }) => {
 		const source = `
 		const isDisabled = true;
 		const template = <button disabled={as.bool(isDisabled)}>Click me</button>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t, BooleanPart } from "@arcmantle/lit-jsx";
@@ -303,13 +304,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with property assignment (arrow function)', async ({ expect }) => {
+	test('transforms element with property assignment (arrow function)', ({ expect }) => {
 		const source = `
 		const value = 'test-value';
 		const template = <input value={prop => value} />;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t, PropertyPart } from "@arcmantle/lit-jsx";
@@ -331,13 +332,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with property assignment (as.prop)', async ({ expect }) => {
+	test('transforms element with property assignment (as.prop)', ({ expect }) => {
 		const source = `
 		const value = 'test-value';
 		const template = <input value={as.prop(value)} />;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t, PropertyPart } from "@arcmantle/lit-jsx";
@@ -359,7 +360,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with mixed attribute types', async ({ expect }) => {
+	test('transforms element with mixed attribute types', ({ expect }) => {
 		const source = `
 		const className = 'dynamic';
 		const isDisabled = true;
@@ -374,7 +375,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t, AttributePart, BooleanPart, PropertyPart } from "@arcmantle/lit-jsx";
@@ -412,13 +413,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== CUSTOM ELEMENT TESTS ==========
 
-	test('transforms simple custom element', async ({ expect }) => {
+	test('transforms simple custom element', ({ expect }) => {
 		const source = `
 		const Button = toTag('custom-button');
 		const template = <Button>Click me</Button>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -429,13 +430,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms custom element with attributes', async ({ expect }) => {
+	test('transforms custom element with attributes', ({ expect }) => {
 		const source = `
 		const Button = toTag('custom-button');
 		const template = <Button type="submit" variant="primary">Submit</Button>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -446,14 +447,14 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms custom element with dynamic attributes', async ({ expect }) => {
+	test('transforms custom element with dynamic attributes', ({ expect }) => {
 		const source = `
 		const Button = toTag('custom-button');
 		const variant = 'primary';
 		const template = <Button variant={variant}>Dynamic</Button>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -465,13 +466,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms self-closing custom element', async ({ expect }) => {
+	test('transforms self-closing custom element', ({ expect }) => {
 		const source = `
 		const Icon = toTag('custom-button');
 		const template = <Icon name="star" />;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -484,12 +485,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== SVG & MATHML TESTS ==========
 
-	test('transforms standalone SVG element', async ({ expect }) => {
+	test('transforms standalone SVG element', ({ expect }) => {
 		const source = `
 		const template = <circle cx="50" cy="50" r="40" />;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { svg } from "lit-html/directives/svg.js";
@@ -497,13 +498,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms SVG with expressions', async ({ expect }) => {
+	test('transforms SVG with expressions', ({ expect }) => {
 		const source = `
 		const radius = 40;
 		const template = <circle cx="50" cy="50" r={radius} />;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { svg } from "lit-html/directives/svg.js";
@@ -512,7 +513,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms SVG wrapped in HTML', async ({ expect }) => {
+	test('transforms SVG wrapped in HTML', ({ expect }) => {
 		const source = `
 		const template = (
 			<div>
@@ -523,7 +524,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -538,12 +539,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms standalone MathML element', async ({ expect }) => {
+	test('transforms standalone MathML element', ({ expect }) => {
 		const source = `
 		const template = <mi>x</mi>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { mathml } from "lit-html/directives/mathml.js";
@@ -551,7 +552,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms complex MathML expression', async ({ expect }) => {
+	test('transforms complex MathML expression', ({ expect }) => {
 		const source = `
 		const template = (
 			<mrow>
@@ -562,7 +563,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { mathml } from "lit-html/directives/mathml.js";
@@ -570,7 +571,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms MathML wrapped in HTML', async ({ expect }) => {
+	test('transforms MathML wrapped in HTML', ({ expect }) => {
 		const source = `
 		const template = (
 			<div>
@@ -585,7 +586,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -602,12 +603,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== FUNCTION COMPONENT TESTS ==========
 
-	test('transforms function component with no props', async ({ expect }) => {
+	test('transforms function component with no props', ({ expect }) => {
 		const source = `
 		const template = <MyComponent />;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 
 		expect(code).toBe(dedent(`
@@ -615,12 +616,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms function component with props', async ({ expect }) => {
+	test('transforms function component with props', ({ expect }) => {
 		const source = `
 		const template = <MyComponent title="Hello" count={42} />;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			const template = MyComponent({
@@ -630,7 +631,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms function component with single child', async ({ expect }) => {
+	test('transforms function component with single child', ({ expect }) => {
 		const source = `
 		const template = (
 			<MyComponent>
@@ -639,7 +640,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			const _temp = {
@@ -655,7 +656,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms function component with multiple children', async ({ expect }) => {
+	test('transforms function component with multiple children', ({ expect }) => {
 		const source = `
 		const template = (
 			<MyComponent>
@@ -667,7 +668,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			const _temp2 = {
@@ -690,7 +691,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms function component with expression child', async ({ expect }) => {
+	test('transforms function component with expression child', ({ expect }) => {
 		const source = `
 		const items = ['a', 'b', 'c'];
 		const template = (
@@ -700,7 +701,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t, AttributePart } from "@arcmantle/lit-jsx";
@@ -729,12 +730,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== DIRECTIVE TESTS ==========
 
-	test('transforms element with single directive', async ({ expect }) => {
+	test('transforms element with single directive', ({ expect }) => {
 		const source = `
 		const template = <div directive={myDirective()}>Content</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -752,12 +753,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with multiple directives', async ({ expect }) => {
+	test('transforms element with multiple directives', ({ expect }) => {
 		const source = `
 		const template = <div directive={[directive1(), directive2()]}>Content</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -778,12 +779,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with ref directive', async ({ expect }) => {
+	test('transforms element with ref directive', ({ expect }) => {
 		const source = `
 		const template = <div ref={this.elementRef}>Content</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { ref } from "lit-html/directives/ref.js";
@@ -804,13 +805,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== SPREAD ATTRIBUTES ==========
 
-	test('transforms element with spread attributes', async ({ expect }) => {
+	test('transforms element with spread attributes', ({ expect }) => {
 		const source = `
 		const props = { class: 'container', id: 'main' };
 		const template = <div {...props}>Content</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t, __$rest } from "@arcmantle/lit-jsx";
@@ -832,14 +833,14 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms custom element with spread attributes', async ({ expect }) => {
+	test('transforms custom element with spread attributes', ({ expect }) => {
 		const source = `
 		const Button = toTag('custom-button');
 		const props = { variant: 'primary', size: 'large' };
 		const template = <Button {...props}>Submit</Button>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -854,13 +855,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with mixed spread and regular attributes', async ({ expect }) => {
+	test('transforms element with mixed spread and regular attributes', ({ expect }) => {
 		const source = `
 		const props = { class: 'base' };
 		const template = <div id="specific" {...props} data-test="value">Content</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t, __$rest } from "@arcmantle/lit-jsx";
@@ -883,7 +884,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== NESTING & COMBINATION TESTS ==========
 
-	test('transforms nested elements', async ({ expect }) => {
+	test('transforms nested elements', ({ expect }) => {
 		const source = `
 		const template = (
 			<div>
@@ -897,7 +898,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -912,7 +913,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms compiled template with standard template child', async ({ expect }) => {
+	test('transforms compiled template with standard template child', ({ expect }) => {
 		const source = `
 		const Element = toTag('custom-element');
 		const template = (
@@ -922,7 +923,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -933,7 +934,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms standard template with compiled template child', async ({ expect }) => {
+	test('transforms standard template with compiled template child', ({ expect }) => {
 		const source = `
 		const Element = toTag('custom-element');
 		const template = (
@@ -943,7 +944,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -954,7 +955,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms fragment with mixed content types', async ({ expect }) => {
+	test('transforms fragment with mixed content types', ({ expect }) => {
 		const source = `
 		const Element = toTag('custom-element');
 		const template = (
@@ -966,7 +967,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -979,7 +980,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms deeply nested mixed templates', async ({ expect }) => {
+	test('transforms deeply nested mixed templates', ({ expect }) => {
 		const source = `
 		const Icon = function() {};
 		const Card = toTag('ui-card');
@@ -999,7 +1000,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -1017,12 +1018,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== EDGE CASES & SPECIAL SCENARIOS ==========
 
-	test('transforms element with only whitespace content', async ({ expect }) => {
+	test('transforms element with only whitespace content', ({ expect }) => {
 		const source = `
 		const template = <div>   </div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -1037,14 +1038,14 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with mixed text and expressions', async ({ expect }) => {
+	test('transforms element with mixed text and expressions', ({ expect }) => {
 		const source = `
 		const name = 'John';
 		const age = 30;
 		const template = <div>Hello {name}, you are {age} years old!</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -1067,13 +1068,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with complex nested expressions', async ({ expect }) => {
+	test('transforms element with complex nested expressions', ({ expect }) => {
 		const source = `
 		const user = { profile: { name: 'John' } };
 		const template = <div>Welcome, {user.profile?.name || 'Guest'}!</div>;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -1096,7 +1097,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with function call expressions', async ({ expect }) => {
+	test('transforms element with function call expressions', ({ expect }) => {
 		const source = `
 		const template = (
 			<div>
@@ -1106,7 +1107,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -1127,7 +1128,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms fragment as root element', async ({ expect }) => {
+	test('transforms fragment as root element', ({ expect }) => {
 		const source = `
 		const template = (
 			<>
@@ -1137,7 +1138,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -1152,12 +1153,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms element with boolean attribute shorthand', async ({ expect }) => {
+	test('transforms element with boolean attribute shorthand', ({ expect }) => {
 		const source = `
 		const template = <input type="checkbox" checked />;
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
@@ -1174,7 +1175,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	// ========== COMPLEX REAL-WORLD SCENARIOS ==========
 
-	test('transforms form with mixed template types', async ({ expect }) => {
+	test('transforms form with mixed template types', ({ expect }) => {
 		const source = `
 		const FormField = toTag('form-field');
 		const Button = toTag('custom-button');
@@ -1211,7 +1212,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -1227,7 +1228,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms data table with dynamic content', async ({ expect }) => {
+	test('transforms data table with dynamic content', ({ expect }) => {
 		const source = `
 		const TableRow = toTag('table-row');
 		const TableCell = toTag('table-cell');
@@ -1265,7 +1266,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -1295,7 +1296,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms dashboard layout with components and templates', async ({ expect }) => {
+	test('transforms dashboard layout with components and templates', ({ expect }) => {
 		const source = `
 		const Card = toTag('ui-card');
 		const Grid = toTag('ui-grid');
@@ -1345,7 +1346,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
@@ -1377,7 +1378,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
-	test('transforms modal with portal and dynamic content', async ({ expect }) => {
+	test('transforms modal with portal and dynamic content', ({ expect }) => {
 		const source = `
 		const Modal = toTag('ui-modal');
 		const Portal = toTag('ui-portal');
@@ -1429,7 +1430,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		);
 		`;
 
-		const code = (await babel.transformAsync(source, getOpts()))?.code;
+		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";

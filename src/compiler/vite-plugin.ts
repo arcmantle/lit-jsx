@@ -26,6 +26,7 @@ import type { PluginOption } from 'vite';
 
 import { litJsxBabelPlugin } from './babel-plugin.js';
 import { babelPlugins, debugMode } from './config.js';
+import { ImportDiscovery } from './import-discovery.js';
 
 
 /**
@@ -83,19 +84,12 @@ export const litJsx = (options: {
 					root:           projectRoot,
 					filename:       id,
 					sourceFileName: id,
-					presets:        [
-						[
-							litJsxBabelPlugin,
-							/* merged into the metadata obj through state.opts */
-							{},
-						],
-					],
-					plugins:    [],
-					ast:        false,
-					sourceMaps: true,
-					configFile: false,
-					babelrc:    false,
-					parserOpts: {
+					plugins:        [ litJsxBabelPlugin() ],
+					ast:            false,
+					sourceMaps:     true,
+					configFile:     false,
+					babelrc:        false,
+					parserOpts:     {
 						plugins: babelPlugins,
 					},
 				};
@@ -106,6 +100,9 @@ export const litJsx = (options: {
 				if (result?.code)
 					return { code: result.code, map: result.map };
 			},
+		},
+		hotUpdate(options) {
+			ImportDiscovery.clearCacheForFileAndDependents(options.file);
 		},
 	};
 };
