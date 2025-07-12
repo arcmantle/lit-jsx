@@ -1,7 +1,6 @@
 import type { PluginItem } from '@babel/core';
 import SyntaxJSX from '@babel/plugin-syntax-jsx';
 
-import { postprocess } from './postprocess.js';
 import { preprocess } from './preprocess.js';
 import { transformJSXElement } from './transform-jsx.js';
 
@@ -16,7 +15,6 @@ export const litJsxBabelPlugin = (): PluginItem => {
 			JSXFragment: transformJSXElement,
 			Program:     {
 				enter: preprocess,
-				exit:  postprocess,
 			},
 		},
 	} satisfies PluginItem;

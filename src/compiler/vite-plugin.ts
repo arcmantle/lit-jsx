@@ -22,7 +22,7 @@
 
 import * as babel from '@babel/core';
 import { deepmerge } from 'deepmerge-ts';
-import type { PluginOption } from 'vite';
+import type { EnvironmentModuleNode, PluginOption } from 'vite';
 
 import { litJsxBabelPlugin } from './babel-plugin.js';
 import { babelPlugins, debugMode } from './config.js';
@@ -75,20 +75,9 @@ export const litJsx = (options: {
 			},
 			order: 'pre',
 			async handler(source, id) {
-				// Default value for babel user options
-				let babelUserOptions: babel.TransformOptions = {};
-
-				if (options.babel) {
-					if (typeof options.babel === 'function') {
-						const babelOptions = options.babel(source, id);
-						babelUserOptions = babelOptions instanceof Promise
-							? await babelOptions
-							: babelOptions;
-					}
-					else {
-						babelUserOptions = options.babel;
-					}
-				}
+				const babelUserOptions = options.babel
+					? await resolveAwaitableFunction(options.babel, source, id)
+					: {};
 
 				const babelOptions: babel.TransformOptions = {
 					root:           projectRoot,
@@ -104,15 +93,98 @@ export const litJsx = (options: {
 					},
 				};
 
-				const opts = deepmerge(babelUserOptions, babelOptions);
-				const result = await babel.transformAsync(source, opts);
+				try {
+					const opts = deepmerge(babelUserOptions, babelOptions);
 
-				if (result?.code)
-					return { code: result.code, map: result.map };
+					//console.time(`Babel transform ${ id }`);
+					const result = (await babel.transformAsync(source, opts))!;
+					//console.timeEnd(`Babel transform ${ id }`);
+
+					return {
+						code: result.code!,
+						map:  result.map!,
+					};
+				}
+				catch (error) {
+					console.error(`Error transforming ${ id } with lit-jsx:`, error);
+				}
 			},
 		},
-		hotUpdate(options) {
-			ImportDiscovery.clearCacheForFileAndDependents(options.file);
+		hotUpdate: {
+			handler(ctx) {
+				// Only process files that our transform handles
+				if (!ctx.file.match(/\.(jsx|tsx)$/))
+					return;
+
+				const moduleGraph = ctx.server.environments.client.moduleGraph;
+
+				// Get all modules that import this file (reverse dependency chain)
+				const changedModule = moduleGraph.getModuleById(ctx.file);
+				if (!changedModule)
+					return;
+
+				// Only process if there are actual importers
+				if (changedModule.importers.size === 0)
+					return ImportDiscovery.clearCacheForFileAndDependents(ctx.file);
+
+				// Collect all importers recursively
+				const getAllImporters = (
+					module: EnvironmentModuleNode,
+					visited = new Set<string>(),
+				): Set<string> => {
+					const importers: Set<string> = new Set();
+
+					if (!module.id || visited.has(module.id))
+						return importers;
+
+					visited.add(module.id);
+
+					for (const importer of module.importers) {
+						if (!importer.id)
+							continue;
+
+						importers.add(importer.id);
+
+						// Recursively get importers of importers
+						const nestedImporters = getAllImporters(importer, visited);
+						nestedImporters.forEach(id => importers.add(id));
+					}
+
+					return importers;
+				};
+
+				const allAffectedFiles = getAllImporters(changedModule);
+				allAffectedFiles.add(ctx.file);
+
+				// Get ModuleNode objects for all affected files and invalidate them
+				const affectedModules: EnvironmentModuleNode[] = [];
+				for (const fileId of allAffectedFiles) {
+					ImportDiscovery.clearCacheForFileAndDependents(fileId);
+
+					const module = moduleGraph.getModuleById(fileId);
+					if (module)
+						affectedModules.push(module);
+				}
+
+				// Return the affected modules to trigger HMR update
+				return affectedModules;
+			},
 		},
-	};
+	} satisfies PluginOption;
+};
+
+
+const resolveAwaitableFunction = async <Fn>(
+	fn: Fn,
+	...args: Fn extends (...args: any[]) => any ? Parameters<Fn> : never
+): Promise<Fn extends (...args: any[]) => any ? ReturnType<Fn> : never> => {
+	if (typeof fn === 'function') {
+		const result = fn(...args);
+
+		return result instanceof Promise
+			? await result
+			: result;
+	}
+
+	return fn as any;
 };

@@ -28,7 +28,7 @@ export const getProgramFromPath = (path: NodePath): t.Program => {
 
 export const getPathFilename = (path: NodePath): string => {
 	const hub = path.hub as Hub & { file: { opts: { filename: string; }; }; };
-	const currentFileName = hub.file.opts.filename;
+	const currentFileName = hub.file.opts.filename.replaceAll('\\', '/');
 
 	return currentFileName;
 };
@@ -759,7 +759,7 @@ export const isJSXFragmentPath = (path: NodePath): path is NodePath<t.JSXFragmen
  * @returns true if the template will be static, false otherwise
  */
 export const isJSXElementStatic = (path: NodePath<t.JSXElement | t.JSXFragment>): boolean => {
-	if (t.isJSXElement(path.node) && isJSXCustomElementComponent(path))
+	if (isJSXCustomElementComponent(path))
 		return true;
 
 	for (const childPath of path.get('children')) {

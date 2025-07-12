@@ -41,6 +41,10 @@ export class ImportDiscovery {
 	static readonly fileDependencies:  Map<string, Set<string>> = new Map();
 	static readonly EMPTY_BINDINGS:    ReadonlyMap<string, ElementDefinition> = new Map();
 
+	static hasFileInCache(filePath: string): boolean {
+		return this.fileDependencies.has(filePath);
+	}
+
 	static clearCacheForFileAndDependents(changedFilePath: string): void {
 		// Clear the changed file itself
 		ImportDiscovery.definitionCache.delete(changedFilePath);
@@ -51,6 +55,8 @@ export class ImportDiscovery {
 		for (const [ file, dependencies ] of ImportDiscovery.fileDependencies) {
 			if (!dependencies.has(changedFilePath))
 				continue;
+
+			console.log(`Clearing cache for dependent file: ${ file } due to change in ${ changedFilePath }`);
 
 			ImportDiscovery.definitionCache.delete(file);
 			ImportDiscovery.fileBindingsCache.delete(file);
@@ -130,7 +136,7 @@ export class ImportDiscovery {
 			const definition = fileBindings.get(elementName)!;
 
 			// Resolve any lazy references
-			return this.resolveLazyDefinition(definition);
+			return this.resolveLazyDefinition(definition, currentFileName);
 		}
 
 		// Fallback to scope-based lookup for dynamic cases
@@ -142,7 +148,7 @@ export class ImportDiscovery {
 		const result = this.analyzeBindingFast(binding, currentFileName);
 
 		// Resolve any lazy references (imports, local references)
-		return this.resolveLazyDefinition(result);
+		return this.resolveLazyDefinition(result, currentFileName);
 	}
 
 	// Analyze all relevant bindings in a file at once
@@ -245,7 +251,7 @@ export class ImportDiscovery {
 		const currentDir = dirname(currentFileName);
 
 		const resolvedResult = this.resolver.sync(currentDir, importSource);
-		const resolvedPath = resolvedResult.path;
+		const resolvedPath = resolvedResult.path?.replaceAll('\\', '/');
 
 		if (!resolvedPath)
 			return { type: 'unknown' };
@@ -390,10 +396,10 @@ export class ImportDiscovery {
 	}
 
 	// Resolve lazy definitions (imports, references)
-	protected resolveLazyDefinition(definition: ElementDefinition): ElementDefinition {
+	protected resolveLazyDefinition(definition: ElementDefinition, currentFilePath: string): ElementDefinition {
 		if (definition.type === 'import' && definition.resolvedPath && definition.originalName) {
-			if (definition.source) {
-				const currentFile = definition.source;
+			if (currentFilePath && definition.resolvedPath) {
+				const currentFile = currentFilePath;
 				const dependsOn = definition.resolvedPath;
 
 				let fileDependencies = ImportDiscovery.fileDependencies.get(currentFile);
@@ -410,7 +416,7 @@ export class ImportDiscovery {
 			const binding = importedBindings.get(definition.originalName);
 
 			if (binding) // Recursively resolve the found definition
-				return this.resolveLazyDefinition(binding);
+				return this.resolveLazyDefinition(binding, definition.resolvedPath);
 
 			// If specific export not found, check for wildcard exports
 			const wildcardExport = importedBindings.get('*');
@@ -418,7 +424,7 @@ export class ImportDiscovery {
 				// Resolve the wildcard export by looking in the target file
 				const currentDir = this.fs.dirname(definition.resolvedPath);
 				const resolvedResult = this.resolver.sync(currentDir, wildcardExport.source!);
-				const resolvedPath = resolvedResult.path;
+				const resolvedPath = resolvedResult.path?.replaceAll('\\', '/');
 
 				if (resolvedPath) {
 					// Create a new import definition for the wildcard target
@@ -430,7 +436,7 @@ export class ImportDiscovery {
 						resolvedPath: resolvedPath,
 					};
 
-					return this.resolveLazyDefinition(wildcardTargetDefinition);
+					return this.resolveLazyDefinition(wildcardTargetDefinition, definition.resolvedPath);
 				}
 			}
 		}
@@ -441,7 +447,7 @@ export class ImportDiscovery {
 			const binding = fileBindings.get(definition.referencedName);
 
 			if (binding)
-				return this.resolveLazyDefinition(binding);
+				return this.resolveLazyDefinition(binding, definition.source);
 		}
 
 		return definition;

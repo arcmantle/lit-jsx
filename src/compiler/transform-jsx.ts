@@ -22,15 +22,37 @@ export const transformJSXElement: VisitNode<
 
 
 const processJSXElement = (path: NodePath<t.JSXElement | t.JSXFragment>) => {
+	//console.time('Analyzing if JSX Element is static');
 	const isStatic = isJSXElementStatic(path);
+	//console.timeEnd('Analyzing if JSX Element is static');
+
+	//console.time('Analyzing template type');
 	const templateType = getTemplateType(path);
+	//console.timeEnd('Analyzing template type');
+
+	//console.time('Analyzing if JSX Element is a function component');
 	const isFunctionComponent = isJSXFunctionElementComponent(path);
+	//console.timeEnd('Analyzing if JSX Element is a function component');
 
-	if (isFunctionComponent)
-		return new TemplateTranspiler().createFunctionalComponent(path);
+	if (isFunctionComponent) {
+		//console.time('Functional Component Transpilation');
+		const cmp = new TemplateTranspiler().createFunctionalComponent(path);
+		//console.timeEnd('Functional Component Transpilation');
 
-	if (isStatic || templateType !== 'html')
-		return new TemplateTranspiler().start(path);
+		return cmp;
+	}
 
-	return new CompiledTranspiler().start(path);
+	if (isStatic || templateType !== 'html') {
+		//console.time('Static Transpilation');
+		const cmp = new TemplateTranspiler().start(path);
+		//console.timeEnd('Static Transpilation');
+
+		return cmp;
+	}
+
+	//console.time('Compiled Transpilation');
+	const cmp = new CompiledTranspiler().start(path);
+	//console.timeEnd('Compiled Transpilation');
+
+	return cmp;
 };
