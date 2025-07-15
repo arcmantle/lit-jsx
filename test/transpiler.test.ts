@@ -10,15 +10,14 @@ import { dedent } from './utils.ts';
 
 suite('JSX to Lit Transpiler Tests', () => {
 	const getOpts = (): babel.TransformOptions => ({
-		root:           '.',
-		filename:       'test.tsx',
-		sourceFileName: 'test.tsx',
-		plugins:        [ litJsxBabelPlugin() ],
-		ast:            false,
-		sourceMaps:     true,
-		configFile:     false,
-		babelrc:        false,
-		parserOpts:     {
+		root:       '.',
+		filename:   Math.random().toString(36).substring(2, 15) + '.tsx',
+		plugins:    [ litJsxBabelPlugin() ],
+		ast:        false,
+		sourceMaps: true,
+		configFile: false,
+		babelrc:    false,
+		parserOpts: {
 			plugins: Array.from(babelPlugins),
 		},
 	});
@@ -415,6 +414,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms simple custom element', ({ expect }) => {
 		const source = `
+		import { toTag } from "@arcmantle/lit-jsx";
+
 		const Button = toTag('custom-button');
 		const template = <Button>Click me</Button>;
 		`;
@@ -423,7 +424,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "@arcmantle/lit-jsx";
+			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Button = toTag('custom-button');
 			const __$Button = __$literalMap.get(Button);
 			const template = htmlStatic\`<\${__$Button}>Click me</\${__$Button}>\`;
@@ -432,6 +433,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms custom element with attributes', ({ expect }) => {
 		const source = `
+		import { toTag } from "@arcmantle/lit-jsx";
+
 		const Button = toTag('custom-button');
 		const template = <Button type="submit" variant="primary">Submit</Button>;
 		`;
@@ -440,7 +443,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "@arcmantle/lit-jsx";
+			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Button = toTag('custom-button');
 			const __$Button = __$literalMap.get(Button);
 			const template = htmlStatic\`<\${__$Button} type="submit" variant="primary">Submit</\${__$Button}>\`;
@@ -449,6 +452,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms custom element with dynamic attributes', ({ expect }) => {
 		const source = `
+		import { toTag } from "@arcmantle/lit-jsx";
+
 		const Button = toTag('custom-button');
 		const variant = 'primary';
 		const template = <Button variant={variant}>Dynamic</Button>;
@@ -458,7 +463,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "@arcmantle/lit-jsx";
+			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Button = toTag('custom-button');
 			const __$Button = __$literalMap.get(Button);
 			const variant = 'primary';
@@ -468,6 +473,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms self-closing custom element', ({ expect }) => {
 		const source = `
+		import { toTag } from "@arcmantle/lit-jsx";
+
 		const Icon = toTag('custom-button');
 		const template = <Icon name="star" />;
 		`;
@@ -476,7 +483,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "@arcmantle/lit-jsx";
+			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Icon = toTag('custom-button');
 			const __$Icon = __$literalMap.get(Icon);
 			const template = htmlStatic\`<\${__$Icon} name="star"></\${__$Icon}>\`;
@@ -982,6 +989,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('transforms deeply nested mixed templates', ({ expect }) => {
 		const source = `
+		import { toTag } from "@arcmantle/lit-jsx";
+
 		const Icon = function() {};
 		const Card = toTag('ui-card');
 		const Button = toTag('ui-button');
@@ -1004,7 +1013,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
-			import { __$literalMap } from "@arcmantle/lit-jsx";
+			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Icon = function () {};
 			const Card = toTag('ui-card');
 			const __$Card = __$literalMap.get(Card);

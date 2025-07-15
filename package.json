@@ -39,12 +39,12 @@
 		"csstype": "^3.1.3",
 		"deepmerge-ts": "^7.1.5",
 		"oxc-resolver": "^11.5.0",
-		"pino": "^9.7.0",
-		"pino-pretty": "^13.0.0",
 		"validate-html-nesting": "^1.2.1"
 	},
 	"devDependencies": {
 		"lit-html": "^3.3.0",
+		"oxc-parser": "^0.77.0",
+		"oxc-walker": "^0.3.0",
 		"typescript": "^5.8.3",
 		"vite": "^7.0.0",
 		"vitest": "^3.2.4"

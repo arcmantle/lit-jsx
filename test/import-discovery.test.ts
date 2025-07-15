@@ -2,11 +2,11 @@ import * as babel from '@babel/core';
 import { suite, test } from 'vitest';
 
 import { babelPlugins } from '../src/compiler/config.ts';
-import { type ElementDefinition, findElementDefinition } from '../src/compiler/import-discovery.ts';
+import { isDynamicOrCustomElement } from '../src/compiler/import-discovery.ts';
 
 
 suite('Import Discovery Tests', () => {
-	const getOpts = (result: { definition: ElementDefinition; }): babel.TransformOptions => {
+	const getOpts = (result: { definition: boolean; }): babel.TransformOptions => {
 		return ({
 			root:           '.',
 			filename:       import.meta.filename,
@@ -15,7 +15,7 @@ suite('Import Discovery Tests', () => {
 				{
 					visitor: {
 						JSXOpeningElement(path) {
-							result.definition = findElementDefinition(path);
+							result.definition = isDynamicOrCustomElement(path);
 						},
 					},
 				},
@@ -30,33 +30,110 @@ suite('Import Discovery Tests', () => {
 		});
 	};
 
-	test('can discover custom elements', ({ expect }) => {
+	test('can discover a locally defined custom element', ({ expect }) => {
 		const source = `
-			import { DiscoveryTest } from './import-discovery/import-discovery.ts';
+			import { toComponent } from '@arcmantle/lit-jsx';
 
-			class LocalClass extends HTMLElement {
-				static tagName = 'local-class';
-			}
+			class CustomElement extends HTMLElement {}
+			const DiscoveryTest = toComponent(CustomElement);
 
 			const template = (
 				<DiscoveryTest />
 			);
 		`;
 
-		const result: { definition: ElementDefinition; } = { definition: { type: 'unknown' } };
+		const result: { definition: boolean; } = { definition: false };
 		babel.transformSync(source, getOpts(result))?.code;
 
-		// The console.log outputs will show you the traversal results
-		//console.log('Final transformed code:', code);
+		expect(result.definition).to.be.true;
 	});
 
-	test('can discover reassigned and re-exported toJSX elements', ({ expect }) => {
-		// This test uses real files created in the complex-scenario directory:
-		// - actual-component.ts: contains the toJSX call
-		// - reassign-file.ts: imports and reassigns the element
-		// - barrel-export.ts: re-exports with a new name
+	test('can discover a locally defined custom element with reassigned callExpr', ({ expect }) => {
+		const source = `
+			import { toComponent } from '@arcmantle/lit-jsx';
 
-		// Main test source that imports the final element
+			class CustomElement extends HTMLElement {}
+			let DiscoveryTest2 = toComponent(CustomElement);
+			let DiscoveryTest = DiscoveryTest2;
+
+			const template = (
+				<DiscoveryTest />
+			);
+		`;
+
+		const result: { definition: boolean; } = { definition: false };
+		babel.transformSync(source, getOpts(result))?.code;
+
+		expect(result.definition).to.be.true;
+	});
+
+	test('can discover a locally defined custom element with renamed import', ({ expect }) => {
+		const source = `
+			import { toComponent as renamed } from '@arcmantle/lit-jsx';
+
+			class CustomElement extends HTMLElement {}
+			let DiscoveryTest = renamed(CustomElement);
+
+			const template = (
+				<DiscoveryTest />
+			);
+		`;
+
+		const result: { definition: boolean; } = { definition: false };
+		babel.transformSync(source, getOpts(result))?.code;
+
+		expect(result.definition).to.be.true;
+	});
+
+	test('can discover custom elements', ({ expect }) => {
+		const source = `
+			import { DiscoveryTest } from './import-discovery/import-discovery.ts';
+
+			const template = (
+				<DiscoveryTest />
+			);
+		`;
+
+		const result: { definition: boolean; } = { definition: false };
+		babel.transformSync(source, getOpts(result))?.code;
+
+		expect(result.definition).to.be.true;
+	});
+
+	test('can discover a root declared tag element', ({ expect }) => {
+		const source = `
+			import { toTag } from '@arcmantle/lit-jsx';
+
+			const Tag = toTag('discovery-test');
+			const template = () => <Tag />;
+		`;
+
+		const result: { definition: boolean; } = { definition: false };
+		babel.transformSync(source, getOpts(result))?.code;
+
+		expect(result.definition).to.be.true;
+	});
+
+	test('can discover a scoped tag element', ({ expect }) => {
+		const source = `
+			import { toTag } from '@arcmantle/lit-jsx';
+
+			const template = () => {
+				const Tag = toTag('discovery-test');
+
+				return (
+					<Tag />
+				)
+			};
+		`;
+
+		const result: { definition: boolean; } = { definition: false };
+		babel.transformSync(source, getOpts(result))?.code;
+
+		expect(result.definition).to.be.true;
+	});
+
+	test('can discover through export reassignment and variable substitution.', ({ expect }) => {
 		const source = `
 			import { FinalElement } from './import-discovery/barrel-export.ts';
 
@@ -65,12 +142,10 @@ suite('Import Discovery Tests', () => {
 			);
 		`;
 
-		const result: { definition: ElementDefinition; } = { definition: { type: 'unknown' } };
+		const result: { definition: boolean; } = { definition: false };
 		babel.transformSync(source, getOpts(result))?.code;
 
-		// The console.log outputs will show the full tracing chain:
-		// FinalElement -> ReassignedElement -> ActualElement -> toJSX(MyActualComponent)
-		console.log('Test completed - check console output for tracing results');
+		expect(result.definition).to.be.true;
 	});
 
 	test('can discover minified/renamed toComponent calls with local exports', ({ expect }) => {
@@ -82,14 +157,10 @@ suite('Import Discovery Tests', () => {
 			);
 		`;
 
-		const result: { definition: ElementDefinition; } = { definition: { type: 'unknown' } };
+		const result: { definition: boolean; } = { definition: false };
 		babel.transformSync(source, getOpts(result))?.code;
 
-		// Should successfully trace:
-		// BadgeCmp -> v -> f(Badge) where f is renamed toComponent
-		expect(result.definition.type).toBe('custom-element');
-		expect(result.definition.source?.includes('minified-example.ts')).toBe(true);
-		expect(result.definition.callExpression).toBeDefined();
+		expect(result.definition).to.be.true;
 	});
 
 	test('can discover minified/renamed toComponent calls with barrel exports', ({ expect }) => {
@@ -106,13 +177,9 @@ suite('Import Discovery Tests', () => {
 			);
 		`;
 
-		const result: { definition: ElementDefinition; } = { definition: { type: 'unknown' } };
+		const result: { definition: boolean; } = { definition: false };
 		babel.transformSync(source, getOpts(result))?.code;
 
-		// Should successfully trace:
-		// BadgeCmp -> v -> f(Badge) where f is renamed toComponent
-		expect(result.definition.type).toBe('custom-element');
-		expect(result.definition.source?.includes('minified-example.ts')).toBe(true);
-		expect(result.definition.callExpression).toBeDefined();
+		expect(result.definition).to.be.true;
 	});
 });

@@ -7,8 +7,12 @@ and this project tries to adhere with [Semantic Versioning](https://semver.org/s
 
 ## [1.0.10] - 2025-07-12
 
-### Changed
-
 - Custom elements and dynamic tags no longer require the `.tag` postfix when using `toComponent` or `toTag` helper functions
 - The transpiler now automatically detects components defined with `toComponent` or `toTag` helpers, eliminating the need for manual `.tag` annotations
 - Improved developer experience by reducing boilerplate code required for custom element definitions
+
+## [1.0.13] - 2025-07-16
+
+- The import discovery process has been completely recreated and now supports all types of imports, exports, and declarations for identifying `toComponent` and `toTag` call expressions.
+- This enhancement ensures robust detection of components and dynamic tags, regardless of how they are imported, exported, or re-exported across files.
+- Improved reliability and scalability for large codebases with complex module structures.

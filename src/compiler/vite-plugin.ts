@@ -125,7 +125,7 @@ export const litJsx = (options: {
 
 				// Only process if there are actual importers
 				if (changedModule.importers.size === 0)
-					return ImportDiscovery.clearCacheForFileAndDependents(ctx.file);
+					return ImportDiscovery.clearCacheForFile(ctx.file);
 
 				// Collect all importers recursively
 				const getAllImporters = (
@@ -159,7 +159,7 @@ export const litJsx = (options: {
 				// Get ModuleNode objects for all affected files and invalidate them
 				const affectedModules: EnvironmentModuleNode[] = [];
 				for (const fileId of allAffectedFiles) {
-					ImportDiscovery.clearCacheForFileAndDependents(fileId);
+					ImportDiscovery.clearCacheForFile(fileId);
 
 					const module = moduleGraph.getModuleById(fileId);
 					if (module)

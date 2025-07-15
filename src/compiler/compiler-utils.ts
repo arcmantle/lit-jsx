@@ -1,11 +1,15 @@
+import { readFileSync } from 'node:fs';
+
+import { parseSync } from '@babel/core';
 import type { Binding, Hub, NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 
 import { isMathmlTag } from '../shared/mathml-tags.js';
 import { isSvgTag } from '../shared/svg-tags.js';
 import type { ProcessorContext } from './attribute-processor.js';
-import { ERROR_MESSAGES, SOURCES, VARIABLES } from './config.js';
-import { findElementDefinition } from './import-discovery.js';
+import { traverse } from './babel-traverse.js';
+import { babelPlugins, ERROR_MESSAGES, SOURCES, VARIABLES } from './config.js';
+import { isDynamicOrCustomElement } from './import-discovery.js';
 
 
 export type Values<T> = T[keyof T];
@@ -27,19 +31,54 @@ export const getProgramFromPath = (path: NodePath): t.Program => {
 
 
 export const getPathFilename = (path: NodePath): string => {
-	const hub = path.hub as Hub & { file: { opts: { filename: string; }; }; };
-	const currentFileName = hub.file.opts.filename.replaceAll('\\', '/');
+	const hub = path.hub as Hub & { file?: { opts?: { filename?: string; }; }; } | undefined;
+	const currentFileName = hub?.file?.opts?.filename?.replaceAll('\\', '/');
 
-	return currentFileName;
+	return currentFileName ?? '';
 };
 
 
+/**
+ * Contains utility methods for retrieving and manipulating node paths in Babel ASTs.
+ */
 export class Ensure {
 
-	static findProgram(path: NodePath): NodePath<t.Program> {
+	static findProgramPathFromNodePath(path: NodePath): NodePath<t.Program> {
 		const programPath = path.findParent(p => t.isProgram(p.node)) as NodePath<t.Program>;
 		if (!programPath)
 			throw new Error('Could not find program path');
+
+		return programPath;
+	}
+
+	static getProgramPathFromFile(filePath: string): NodePath<t.Program> | undefined {
+		const fileContent = readFileSync(filePath, 'utf-8');
+
+		let ast: t.File;
+		try {
+			ast = parseSync(fileContent, {
+				filename:   filePath,
+				parserOpts: {
+					plugins: Array.from(babelPlugins),
+				},
+			})!;
+		}
+		catch (error) {
+			return;
+		}
+
+		let programPath: NodePath<t.Program> = undefined as any;
+		traverse(ast, { Program(path) { programPath = path; path.stop(); } });
+
+		// Attach a minimal hub manually
+		// this allows retrieving the filename from the path
+		programPath.hub = {
+			file: {
+				opts: {
+					filename: filePath,
+				},
+			},
+		} as any;
 
 		return programPath;
 	}
@@ -239,7 +278,7 @@ export class Ensure {
 		expression: t.Expression,
 	): t.Identifier {
 		// Find the program path
-		const programPath = this.findProgram(path);
+		const programPath = this.findProgramPathFromNodePath(path);
 
 		// Check if variable with this name already exists at the top level
 		const existingBinding = programPath.scope.getBinding(variableName);
@@ -717,8 +756,7 @@ export const isJSXCustomElementComponent = (
 	if (!isComponent(tagName))
 		return false;
 
-	const type = findElementDefinition(path.get('openingElement'));
-	if (type.type === 'custom-element')
+	if (isDynamicOrCustomElement(path.get('openingElement')))
 		return true;
 
 	return false;
@@ -738,8 +776,7 @@ export const isJSXFunctionElementComponent = (
 	if (!isComponent(tagName))
 		return false;
 
-	const type = findElementDefinition(path.get('openingElement'));
-	if (type.type === 'custom-element')
+	if (isDynamicOrCustomElement(path.get('openingElement')))
 		return false;
 
 	return true;
