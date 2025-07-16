@@ -70,7 +70,11 @@ import { litJsx } from '@arcmantle/lit-jsx/vite-jsx-preserve';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [litJsx()],
+  plugins: [
+    litJsx({
+      legacyDecorators: true
+    })
+  ],
 });
 ```
 
@@ -661,14 +665,7 @@ import { litJsx } from '@arcmantle/lit-jsx/vite-jsx-preserve';
 export default defineConfig({
   plugins: [
     litJsx({
-      babel: {
-        // Babel transform options
-        plugins: ['@babel/plugin-proposal-decorators'],
-      },
-      // Or use a function for dynamic configuration
-      babel: (code, id) => ({
-        plugins: id.includes('legacy') ? [] : ['modern-plugin'],
-      }),
+      legacyDecorators: true,
     }),
   ],
 });
@@ -704,7 +701,7 @@ lit-jsx automatically detects and uses the appropriate template type:
 - Complex object values
 
 ```tsx
-<input value={as.prop(formData.email)} checked={as.prop(isSelected)} />
+<input value={as.prop(formData.email)} checked={prop => isSelected} />
 ```
 
 #### **Boolean Attribute Binding (`as.bool()` or `bool =>`)**
@@ -714,7 +711,7 @@ lit-jsx automatically detects and uses the appropriate template type:
 - Presence/absence semantics
 
 ```tsx
-<button disabled={as.bool(isLoading)} hidden={as.bool(!isVisible)} />
+<button disabled={as.bool(isLoading)} hidden={bool => !isVisible} />
 ```
 
 ### Function Component Guidelines
@@ -726,7 +723,7 @@ lit-jsx automatically detects and uses the appropriate template type:
 
 ### Dynamic Tag Best Practices
 
-- Always use `toTag()` with the `.tag` property pattern
+- Always use `toTag()` to define your dynamic tags.
 - Use descriptive variable names for clarity
 - Consider TypeScript for better type safety with HTML elements
 - Document complex dynamic tag logic
@@ -767,7 +764,7 @@ html`<div class=${classMap(classes)}>${content}</div>`
 
 ## 🤝 Contributing
 
-lit-jsx is part of the larger Weave project. Contributions are welcome!
+Contributions, issues or requests are welcome!
 
 ## 📄 License
 

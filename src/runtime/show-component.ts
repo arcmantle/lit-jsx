@@ -1,18 +1,4 @@
-import { when as litWhen } from 'lit-html/directives/when.js';
-
-
-type Falsy = null | undefined | false | 0 | -0 | 0n | '';
-export const when = litWhen as <C, T, F>(
-	condition: C,
-	trueCase: (c: NoInfer<Exclude<C, Falsy>>) => T,
-	falseCase?: (c: NoInfer<Exclude<C, Falsy>>) => F,
-) => C extends Falsy ? F : T;
-
-type ShowTrueCase<C, T> = (value: NoInfer<Exclude<C, Falsy>>) => T;
-type ShowFalseCase<C, F> = (value: NoInfer<Exclude<C, Falsy>>) => F;
-type ShowChildren<C, T, F> =
-	| ShowTrueCase<C, T>
-	| [ true: ShowTrueCase<C, T>, false: ShowFalseCase<C, F> ];
+import { when } from 'lit-html/directives/when.js';
 
 
 /**
@@ -37,10 +23,15 @@ type ShowChildren<C, T, F> =
  * </Show>
  * ```
  */
-export function Show<C, T, F>(props: {
+export function Show<C>(props: {
 	when:     C;
-	children: ShowChildren<C, T, F>;
-}): C extends Falsy ? F : T {
+	children:
+		| ((value: NoInfer<C>) => JSX.JSXElement)
+		| [
+			true: ((value: NoInfer<C>) => JSX.JSXElement),
+			false: ((value: NoInfer<C>) => JSX.JSXElement),
+		];
+}): JSX.JSXElement {
 	if (Array.isArray(props.children))
 		return when(props.when, props.children[0], props.children[1]);
 
