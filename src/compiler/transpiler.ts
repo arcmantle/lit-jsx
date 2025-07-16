@@ -132,7 +132,7 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 			context.builder.addExpression(literalIdentifier);
 		}
 		else {
-		// If the tag is not a component, we will treat it as a regular HTML element.
+			// If the tag is not a component, we will treat it as a regular HTML element.
 			context.builder.addText('<' + context.tagName);
 		}
 	}

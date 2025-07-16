@@ -12,6 +12,7 @@ export class ImportDiscovery {
 	static readonly programCache:  Map<string, NodePath<t.Program>> = new Map();
 	static readonly resolvedCache: Map<string, Map<string, boolean>> = new Map();
 	static readonly validCalls:    Set<string> = new Set([ 'toComponent', 'toTag' ]);
+	static readonly validTypes:    Set<string> = new Set([ 'ToComponent', 'ToTag' ]);
 
 	static clearCacheForFile(filePath: string): void {
 		ImportDiscovery.programCache.delete(filePath);
@@ -60,6 +61,12 @@ export class ImportDiscovery {
 		const node = binding.path.node;
 
 		if (t.isVariableDeclarator(node)) {
+			// Check if the variable has a TypeScript type annotation for ToComponent or ToTag
+			if (t.isIdentifier(node.id)) {
+				if (this.hasValidTypeAnnotation(node.id.typeAnnotation))
+					return true;
+			}
+
 			if (t.isCallExpression(node.init)) {
 				const callee = node.init.callee;
 
@@ -126,6 +133,44 @@ export class ImportDiscovery {
 
 				return this.hasValidCallAssignment(newProgramPath, newBinding);
 			}
+		}
+		else if (t.isIdentifier(node)) {
+			// Handle function parameters with type annotations like (Element: typeof DiscoveryTest)
+			if (t.isTSTypeAnnotation(node.typeAnnotation)) {
+				const typeAnnotation = node.typeAnnotation.typeAnnotation;
+
+				// Check for direct type reference to ToComponent or ToTag
+				if (this.hasValidTypeAnnotation(node.typeAnnotation))
+					return true;
+
+				if (t.isTSTypeQuery(typeAnnotation)) {
+					// Extract the referenced type name from TSTypeQuery (typeof SomeVariable)
+					const exprName = typeAnnotation.exprName;
+
+					if (t.isIdentifier(exprName)) {
+						const referencedName = exprName.name;
+						const newBinding = programPath.scope.getBinding(referencedName);
+						if (!newBinding)
+							return false;
+
+						return this.hasValidCallAssignment(programPath, newBinding);
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	protected hasValidTypeAnnotation(typeAnnotation: t.Identifier['typeAnnotation']): boolean {
+		if (!t.isTSTypeAnnotation(typeAnnotation))
+			return false;
+
+		const typeRef = typeAnnotation.typeAnnotation;
+		if (t.isTSTypeReference(typeRef) && t.isIdentifier(typeRef.typeName)) {
+			const typeName = typeRef.typeName.name;
+
+			return ImportDiscovery.validTypes.has(typeName);
 		}
 
 		return false;

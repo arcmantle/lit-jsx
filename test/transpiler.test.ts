@@ -5,22 +5,27 @@ import { suite, test } from 'vitest';
 
 import { litJsxBabelPlugin } from '../src/compiler/babel-plugin.ts';
 import { babelPlugins } from '../src/compiler/config.ts';
+import { ImportDiscovery } from '../src/compiler/import-discovery.ts';
 import { dedent } from './utils.ts';
 
 
 suite('JSX to Lit Transpiler Tests', () => {
-	const getOpts = (): babel.TransformOptions => ({
-		root:       '.',
-		filename:   Math.random().toString(36).substring(2, 15) + '.tsx',
-		plugins:    [ litJsxBabelPlugin() ],
-		ast:        false,
-		sourceMaps: true,
-		configFile: false,
-		babelrc:    false,
-		parserOpts: {
-			plugins: Array.from(babelPlugins),
-		},
-	});
+	const getOpts = (): babel.TransformOptions => {
+		ImportDiscovery.programCache.clear();
+		ImportDiscovery.resolvedCache.clear();
+
+		return {
+			filename:   import.meta.filename,
+			plugins:    [ litJsxBabelPlugin() ],
+			ast:        false,
+			sourceMaps: true,
+			configFile: false,
+			babelrc:    false,
+			parserOpts: {
+				plugins: Array.from(babelPlugins),
+			},
+		};
+	};
 
 	// ========== BASIC ELEMENT TESTS ==========
 
@@ -608,6 +613,61 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
+	// ========== SCOPE TESTS ==========
+
+	test('correctly finds parameter to be custom-element with typeof annotation', ({ expect }) => {
+		const source = `
+		const MyComponent = toComponent('my-component');
+		const template = (Element: typeof MyComponent) => <Element />;
+		`;
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
+			const MyComponent = toComponent('my-component');
+			const template = (Element: typeof MyComponent) => {
+			  const __$Element = __$literalMap.get(Element);
+			  return htmlStatic\`<\${__$Element}></\${__$Element}>\`;
+			};
+		`));
+	});
+
+	test('correctly finds parameter to be custom-element with ToComponent annotation', ({ expect }) => {
+		const source = `
+		const template = (Element: ToComponent) => <Element />;
+		`;
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
+			const template = (Element: ToComponent) => {
+			  const __$Element = __$literalMap.get(Element);
+			  return htmlStatic\`<\${__$Element}></\${__$Element}>\`;
+			};
+		`));
+	});
+
+	test('correctly places dynamic tag variables in function with block scope', ({ expect }) => {
+		const source = `
+		const template = (Element: ToComponent) => {
+			return <Element />
+		};
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		expect(code).toBe(dedent(`
+			import { html as htmlStatic } from "lit-html/static.js";
+			import { __$literalMap } from "@arcmantle/lit-jsx";
+			const template = (Element: typeof MyComponent) => {
+			  const __$Element = __$literalMap.get(Element);
+			  return htmlStatic\`<\${__$Element}></\${__$Element}>\`;
+			};
+		`));
+	});
+
 	// ========== FUNCTION COMPONENT TESTS ==========
 
 	test('transforms function component with no props', ({ expect }) => {
@@ -727,10 +787,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 			};
 			const items = ['a', 'b', 'c'];
 			const template = List({
-			  children: items.map(item => ({
-			    "_$litType$": _temp,
-			    "values": [item, item]
-			  }))
+			  children: items.map(item => {
+			    return {
+			      "_$litType$": _temp,
+			      "values": [item, item]
+			    };
+			  })
 			});
 		`));
 	});
@@ -1293,14 +1355,16 @@ suite('JSX to Lit Transpiler Tests', () => {
 			const __$TableCell = __$literalMap.get(TableCell);
 			const template = {
 			  "_$litType$": _temp,
-			  "values": [users.map(user => htmlStatic\`<\${__$TableRow} key=\${user.id}><\${__$TableCell}>\${user.name}</\${__$TableCell}><\${__$TableCell}>\${user.age}</\${__$TableCell}><\${__$TableCell}>\${ActionButton({
-			    onClick: prop => () => editUser(user.id),
-			    icon: "edit"
-			  })}\${ActionButton({
-			    onClick: prop => () => deleteUser(user.id),
-			    icon: "delete",
-			    variant: "danger"
-			  })}</\${__$TableCell}></\${__$TableRow}>\`)]
+			  "values": [users.map(user => {
+			    return htmlStatic\`<\${__$TableRow} key=\${user.id}><\${__$TableCell}>\${user.name}</\${__$TableCell}><\${__$TableCell}>\${user.age}</\${__$TableCell}><\${__$TableCell}>\${ActionButton({
+			      onClick: prop => () => editUser(user.id),
+			      icon: "edit"
+			    })}\${ActionButton({
+			      onClick: prop => () => deleteUser(user.id),
+			      icon: "delete",
+			      variant: "danger"
+			    })}</\${__$TableCell}></\${__$TableRow}>\`;
+			  })]
 			};
 		`));
 	});
@@ -1377,13 +1441,15 @@ suite('JSX to Lit Transpiler Tests', () => {
 			})}</\${__$Card}><\${__$Card} title="Recent Activity">\${ActivityFeed({
 			  items: activities,
 			  maxItems: 10
-			})}</\${__$Card}><\${__$Card} title="Quick Actions"><div class="action-grid">\${quickActions.map(action => ActionCard({
-			  key: action.id,
-			  title: action.title,
-			  icon: action.icon,
-			  onClick: action.handler,
-			  disabled: bool => action.disabled
-			}))}</\${__$Card}></\${__$Card}></\${__$Grid}></main></div></div>\`;
+			})}</\${__$Card}><\${__$Card} title="Quick Actions"><div class="action-grid">\${quickActions.map(action => {
+			  return ActionCard({
+			    key: action.id,
+			    title: action.title,
+			    icon: action.icon,
+			    onClick: action.handler,
+			    disabled: bool => action.disabled
+			  });
+			})}</\${__$Card}></\${__$Card}></\${__$Grid}></main></div></div>\`;
 		`));
 	});
 
@@ -1453,7 +1519,9 @@ suite('JSX to Lit Transpiler Tests', () => {
 			const template = htmlStatic\`<\${__$Portal} target="body"><\${__$Modal} ?open=\${isOpen} onClose=\${handleClose} \${trapFocus()} \${preventScroll()} \${clickOutside(handleClose)}><div class="modal-header"><h2>\${title}</\${__$Modal}><\${__$Button} variant="ghost" size="small" onClick=\${handleClose} aria-label="Close">\${CloseIcon({})}</\${__$Button}></\${__$Modal}><div class="modal-body">\${content || DefaultContent({
 			  type: contentType,
 			  data: contentData
-			})}</\${__$Modal}><div class="modal-footer">\${actions.map(action => htmlStatic\`<\${__$Button} key=\${action.id} variant=\${action.variant || 'secondary'} onClick=\${action.handler} ?disabled=\${action.disabled}>\${action.label}</\${__$Button}>\`)}</\${__$Modal}></\${__$Modal}></\${__$Portal}>\`;
+			})}</\${__$Modal}><div class="modal-footer">\${actions.map(action => {
+			  return htmlStatic\`<\${__$Button} key=\${action.id} variant=\${action.variant || 'secondary'} onClick=\${action.handler} ?disabled=\${action.disabled}>\${action.label}</\${__$Button}>\`;
+			})}</\${__$Modal}></\${__$Modal}></\${__$Portal}>\`;
 		`));
 	});
 });

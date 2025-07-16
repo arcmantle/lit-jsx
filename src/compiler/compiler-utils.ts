@@ -338,24 +338,48 @@ export class Ensure {
 			// Then check if the tagName exists
 			const tagNameBinding = currentScope.getBinding(tagName);
 			if (tagNameBinding) {
-				// Found the tagName binding, now insert the prefixed declaration just below it
+				// Found the tagName binding, now insert the prefixed declaration
 				const declarator = createDeclaration();
 				const variableDeclaration = t.variableDeclaration('const', [ declarator ]);
 
-				// Find the statement-level path to insert after
-				// This handles cases where the binding might be an import specifier or variable declarator
-				let statementPath: NodePath<t.Node> | null = tagNameBinding.path;
-				while (statementPath && !statementPath.isStatement())
-					statementPath = statementPath.parentPath;
+				// Check if the binding is a function parameter
+				if (tagNameBinding.kind === 'param') {
+					// For function parameters, insert at the beginning of the function body
+					const functionPath = tagNameBinding.path.getFunctionParent();
 
-				if (!statementPath)
-					throw new Error(ERROR_MESSAGES.NO_STATEMENT_PATH(tagName));
+					if (t.isFunction(functionPath?.node)) {
+						const body = functionPath.node.body;
 
-				// Insert the new declaration after the tagName declaration
-				const [ insertedPath ] = statementPath.insertAfter(variableDeclaration);
+						if (t.isBlockStatement(body)) {
+							const bodyPath = this.getNodePath(body, path)!;
 
-				// Register the new declaration with the appropriate scope
-				statementPath.scope.registerDeclaration(insertedPath);
+							// Insert at the beginning of the block statement using paths
+							const [ insertedPath ] = bodyPath.unshiftContainer('body', variableDeclaration);
+
+							// Register the new declaration with the body's scope
+							bodyPath.scope.registerDeclaration(insertedPath);
+						}
+						else {
+							throw new Error(ERROR_MESSAGES.BODY_NOT_BLOCK(tagName));
+						}
+					}
+				}
+				else {
+					// For non-parameter bindings, insert after the declaration
+					// Find the statement-level path to insert after
+					let statementPath: NodePath<t.Node> | null = tagNameBinding.path;
+					while (statementPath && !statementPath.isStatement())
+						statementPath = statementPath.parentPath;
+
+					if (!statementPath)
+						throw new Error(ERROR_MESSAGES.NO_STATEMENT_PATH(tagName));
+
+					// Insert the new declaration after the statement containing the tagName declaration
+					const [ insertedPath ] = statementPath.insertAfter(variableDeclaration);
+
+					// Register the new declaration with the appropriate scope
+					statementPath.scope.registerDeclaration(insertedPath);
+				}
 
 				return t.identifier(variableName);
 			}

@@ -299,6 +299,38 @@ const DataListComponent: <T>(props: JSX.JSXProps<DataList<T>>) => string =
 
 **Important**: The explicit type annotation `<T>(props: JSX.JSXProps<DataList<T>>) => string` is **required** for generic custom elements. Without this annotation, TypeScript will lose the generic type information and you won't be able to use type parameters like `<User>` or `<Product>` when using the component.
 
+#### Parameter Typing for Custom Elements
+
+When writing functions that accept custom element components as parameters, you must use proper TypeScript typing:
+
+```tsx
+import { toComponent, ToComponent } from '@arcmantle/lit-jsx';
+
+// ✅ Using ToComponent type annotation
+function renderWithWrapper(Component: ToComponent) {
+  return ({ children, ...props }) => (
+    <div class="wrapper">
+      <Component {...props}>{children}</Component>
+    </div>
+  );
+}
+
+// ✅ Using typeof with a toComponent() reference
+const MyButton = toComponent(MyButtonElement);
+function enhanceButton(ButtonComponent: typeof MyButton) {
+  return ({ enhanced, ...props }) => (
+    <ButtonComponent class={enhanced ? 'enhanced' : ''} {...props} />
+  );
+}
+
+// ❌ This won't work - compiler can't detect the custom element
+function renderComponent(Component: any) {
+  return <Component>Content</Component>; // Error: Component not recognized
+}
+```
+
+**Important**: Without proper typing (`ToComponent` or `typeof` reference), the compiler cannot determine that a parameter represents a custom element component, which will result in compilation errors.
+
 ### Dynamic Tag Names
 
 lit-jsx supports dynamic element types using the `toTag()` helper:
@@ -318,6 +350,36 @@ function ActionElement({ href, children }) {
 ```
 
 The compiler automatically detects when `toTag()` is used and optimizes the template accordingly.
+
+#### Parameter Typing for Dynamic Tags
+
+When writing functions that accept dynamic tag parameters, you must use proper TypeScript typing to ensure the compiler correctly identifies them:
+
+```tsx
+import { toTag, ToTag } from '@arcmantle/lit-jsx';
+
+// ✅ Using ToTag type annotation
+function createWrapper(TagName: ToTag) {
+  return ({ children, ...props }) => (
+    <TagName {...props}>{children}</TagName>
+  );
+}
+
+// ✅ Using typeof with a toTag() reference
+const ButtonTag = toTag('button');
+function createButton(Element: typeof ButtonTag) {
+  return ({ label, ...props }) => (
+    <Element {...props}>{label}</Element>
+  );
+}
+
+// ❌ This won't work - compiler can't detect the dynamic tag
+function createElement(TagName: string) {
+  return <TagName>Content</TagName>; // Error: TagName not recognized
+}
+```
+
+**Important**: Without proper typing, the compiler cannot determine that a parameter represents a dynamic tag, which will result in compilation errors.
 
 ### Library Components
 

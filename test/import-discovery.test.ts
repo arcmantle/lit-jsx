@@ -2,16 +2,17 @@ import * as babel from '@babel/core';
 import { suite, test } from 'vitest';
 
 import { babelPlugins } from '../src/compiler/config.ts';
-import { isDynamicOrCustomElement } from '../src/compiler/import-discovery.ts';
+import { ImportDiscovery, isDynamicOrCustomElement } from '../src/compiler/import-discovery.ts';
 
 
 suite('Import Discovery Tests', () => {
 	const getOpts = (result: { definition: boolean; }): babel.TransformOptions => {
-		return ({
-			root:           '.',
-			filename:       import.meta.filename,
-			sourceFileName: import.meta.filename,
-			plugins:        [
+		ImportDiscovery.programCache.clear();
+		ImportDiscovery.resolvedCache.clear();
+
+		return {
+			filename: import.meta.filename,
+			plugins:  [
 				{
 					visitor: {
 						JSXOpeningElement(path) {
@@ -27,7 +28,7 @@ suite('Import Discovery Tests', () => {
 			parserOpts: {
 				plugins: Array.from(babelPlugins),
 			},
-		});
+		};
 	};
 
 	test('can discover a locally defined custom element', ({ expect }) => {
@@ -77,6 +78,21 @@ suite('Import Discovery Tests', () => {
 			const template = (
 				<DiscoveryTest />
 			);
+		`;
+
+		const result: { definition: boolean; } = { definition: false };
+		babel.transformSync(source, getOpts(result))?.code;
+
+		expect(result.definition).to.be.true;
+	});
+
+	test('can discovery a custom element from a function parameter with type annotation', ({ expect }) => {
+		const source = `
+			import { toComponent } from '@arcmantle/lit-jsx';
+
+			const DiscoveryTest = toComponent(new class extends HTMLElement {});
+
+			const template = (Element: typeof DiscoveryTest) => <Element />;
 		`;
 
 		const result: { definition: boolean; } = { definition: false };

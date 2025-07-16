@@ -37,7 +37,7 @@ export const toComponent = <T extends { new(...args: any): any; tagName: string;
 	return element.tagName as any;
 };
 
-export type ToComponent<T extends object> = (props: JSX.JSXProps<T>) => string;
+export type ToComponent<T extends object = object> = (props: JSX.JSXProps<T>) => string;
 
 
 /**
@@ -82,3 +82,6 @@ export type ToComponent<T extends object> = (props: JSX.JSXProps<T>) => string;
 export const toTag = <T extends keyof HTMLElementTagNameMap | (string & {})>(
 	tag: T,
 ): T => tag;
+
+
+export type ToTag<T extends keyof HTMLElementTagNameMap | (string & {}) = string> = T;

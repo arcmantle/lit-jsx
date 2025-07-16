@@ -79,4 +79,6 @@ export const ERROR_MESSAGES = {
 	NO_STATEMENT_PATH:          (tagName: string): string => `Could not find statement-level path for tagName: ${ tagName }`,
 	UNKNOWN_TEMPLATE_TYPE:      (type: string): string => `Unknown template type: ${ type }`,
 	INVALID_BIND_TYPE:          (type: string): string => `Invalid bind type: ${ type }`,
+	BODY_NOT_BLOCK:             (tagName: string): string => `The body of the function returning '${ tagName }' `
+		+ `must be a block statement.`,
 } as const;
