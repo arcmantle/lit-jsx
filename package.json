@@ -1,33 +1,27 @@
 {
 	"name": "@arcmantle/lit-jsx",
+	"version": "1.0.0",
 	"description": "A JSX runtime and compiler that transforms JSX into Lit templates.",
 	"license": "Apache-2.0",
-	"contributors": [
-		"Kristoffer Roen-Lie"
-	],
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/arcmantle/lit-jsx.git"
-	},
-	"version": "1.0.0",
-	"files": [
-		"dist",
-		"src"
-	],
+	"author": "Kristoffer Roen-Lie",
+	"sideEffects": false,
 	"type": "module",
-	"main": "./dist/react-jsx/jsx-runtime.js",
-	"types": "./dist/shared/jsx-types.d.ts",
 	"exports": {
 		".": "./dist/utils.js",
 		"./jsx-runtime": "./dist/shared/jsx-types.d.ts",
 		"./jsx-dev-runtime": "./dist/shared/jsx-types.d.ts",
 		"./vite": "./dist/compiler/vite-plugin.js"
 	},
-	"sideEffects": false,
+	"main": "./dist/react-jsx/jsx-runtime.js",
+	"types": "./dist/shared/jsx-types.d.ts",
+	"files": [
+		"dist",
+		"src"
+	],
 	"scripts": {
+		"build": "rimraf dist && tsc --project ./src/tsconfig.json",
 		"dev": "vite build --watch --mode=development",
-		"test": "pnpm vitest run",
-		"build": "rimraf dist && tsc --project ./src/tsconfig.json"
+		"test": "pnpm vitest run"
 	},
 	"dependencies": {
 		"@babel/core": "^7.20.12",
