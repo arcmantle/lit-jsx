@@ -84,7 +84,7 @@ export default defineConfig({
 {
   "compilerOptions": {
     "jsx": "preserve",
-    "jsxImportSource": "lit-jsx"
+    "jsxImportSource": "@arcmantle/lit-jsx"
   }
 }
 ```
