@@ -14,4 +14,4 @@ jobs:
   deploy-docs:
     uses: arcmantle/github-workflows/.github/workflows/deploy-typedoc.yml@main
     with:
-      build-dependencies: '@arcmantle/tsconfig'
+      build-dependencies: '@types/node @arcmantle/tsconfig'
