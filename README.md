@@ -53,11 +53,11 @@ html`
 ## 📦 Installation
 
 ```bash
-npm install @arcmantle/lit-jsx
+npm install @arcmantle/lit-jsx lit-html
 # or
-pnpm add @arcmantle/lit-jsx
+pnpm add @arcmantle/lit-jsx lit-html
 # or
-yarn add @arcmantle/lit-jsx
+yarn add @arcmantle/lit-jsx lit-html
 ```
 
 ## ⚡ Quick Start

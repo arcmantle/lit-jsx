@@ -32,11 +32,11 @@
 		"@types/babel__traverse": "^7.20.7",
 		"csstype": "^3.1.3",
 		"deepmerge-ts": "^7.1.5",
+		"lit-html": "^3.3.0",
 		"oxc-resolver": "^11.5.0",
 		"validate-html-nesting": "^1.2.1"
 	},
 	"devDependencies": {
-		"lit-html": "^3.3.0",
 		"oxc-parser": "^0.77.0",
 		"oxc-walker": "^0.3.0",
 		"typescript": "^5.8.3",

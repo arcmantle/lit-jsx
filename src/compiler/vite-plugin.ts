@@ -1,25 +1,3 @@
-/**
- * @fileoverview Vite plugin for lit-jsx preserve-JSX compilation mode.
- *
- * This plugin provides compile-time JSX transformation using Babel to convert
- * JSX syntax directly into optimized Lit templates. Unlike the React compatibility
- * mode, this preserves JSX through the entire build pipeline for maximum performance.
- *
- * @example
- * ```ts
- * // vite.config.ts
- * import { litJsx } from "@arcmantle/lit-jsx/vite-jsx-preserve";
- *
- * export default {
- *   plugins: [litJsx({
- *     babel: {
- *       // Custom Babel options
- *     }
- *   })]
- * };
- * ```
- */
-
 import * as babel from '@babel/core';
 import { deepmerge } from 'deepmerge-ts';
 import type { EnvironmentModuleNode, PluginOption } from 'vite';
@@ -34,14 +12,12 @@ import { ImportDiscovery } from './import-discovery.js';
  *
  * This plugin uses Babel to transform JSX directly into Lit templates at build time,
  * providing optimal performance by eliminating runtime JSX processing entirely.
- *
- * @param options - Configuration options for the plugin
- * @param options.babel - Babel transform options or function returning options
- * @returns Vite plugin configuration
  */
 export const litJsx = (options: {
-	legacyDecorators?: boolean; // Enable legacy decorators support
-	debug?:            boolean; // Enable debug mode for additional logging
+	/**  Enable legacy decorators support */
+	legacyDecorators?: boolean;
+	/** Enable debug mode for additional logging */
+	debug?:            boolean;
 	/** Options for the Babel transform */
 	babel?:
 		| babel.TransformOptions
@@ -61,7 +37,7 @@ export const litJsx = (options: {
 	const finalBabelPlugins = Array.from(babelPlugins);
 
 	return {
-		name:   'lit-jsx-preserve',
+		name:   'lit-jsx',
 		config: {
 			order: 'pre',
 			handler(userConfig, env) {
@@ -75,34 +51,31 @@ export const litJsx = (options: {
 			},
 			order: 'pre',
 			async handler(source, id) {
-				const babelUserOptions = options.babel
-					? await resolveAwaitableFunction(options.babel, source, id)
-					: {};
-
-				const babelOptions: babel.TransformOptions = {
-					root:           projectRoot,
-					filename:       id,
-					sourceFileName: id,
-					plugins:        [ litJsxBabelPlugin() ],
-					ast:            false,
-					sourceMaps:     true,
-					configFile:     false,
-					babelrc:        false,
-					parserOpts:     {
-						plugins: finalBabelPlugins,
-					},
-				};
-
 				try {
-					const opts = deepmerge(babelUserOptions, babelOptions);
+					const babelUserOptions = options.babel
+						? await resolveAwaitableFunction(options.babel, source, id)
+						: {};
 
-					//console.time(`Babel transform ${ id }`);
+					const babelOptions: babel.TransformOptions = {
+						root:           projectRoot,
+						filename:       id,
+						sourceFileName: id,
+						plugins:        [ litJsxBabelPlugin() ],
+						ast:            false,
+						sourceMaps:     true,
+						configFile:     false,
+						babelrc:        false,
+						parserOpts:     {
+							plugins: finalBabelPlugins,
+						},
+					};
+
+					const opts = deepmerge(babelUserOptions, babelOptions);
 					const result = (await babel.transformAsync(source, opts))!;
-					//console.timeEnd(`Babel transform ${ id }`);
 
 					return {
 						code: result.code!,
-						map:  result.map!,
+						map:  result.map,
 					};
 				}
 				catch (error) {
