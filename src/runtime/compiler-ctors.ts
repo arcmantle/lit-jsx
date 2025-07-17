@@ -1,11 +1,3 @@
-/**
- * @fileoverview Internal lit-html part constructors for jsx-lit compiler.
- *
- * This module exports the internal part constructors from lit-html that are used
- * by the lit-jsx compiler to create optimized template parts. These are low-level
- * utilities used internally by the compilation process.
- */
-
 import * as internals from 'lit-html/private-ssr-support.js';
 
 
