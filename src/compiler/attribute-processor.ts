@@ -442,7 +442,7 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 
 	directive(attr: JSXAttributeWithExpression, context: CompiledContext): void {
 		for (const expression of this.createDirective(attr, context)) {
-			context.builder.addPart(CreateCompiledPart.element(context.currentIndex));
+			context.builder.addPart(CreateCompiledPart.element(context.currentIndex.value));
 			context.builder.addValue(expression);
 		}
 	}
@@ -450,7 +450,7 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 	ref(attr: JSXAttributeWithExpression, context: CompiledContext): void {
 		const expression = this.createRef(attr, context);
 
-		context.builder.addPart(CreateCompiledPart.element(context.currentIndex));
+		context.builder.addPart(CreateCompiledPart.element(context.currentIndex.value));
 		context.builder.addValue(expression);
 		context.importsUsed.add('createRef');
 	}
@@ -458,7 +458,7 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 	classList(attr: JSXAttributeWithExpression, context: CompiledContext): void {
 		const expression = this.createClassList(attr, context);
 
-		context.builder.addPart(CreateCompiledPart.attribute(context.currentIndex, 'class'));
+		context.builder.addPart(CreateCompiledPart.attribute(context.currentIndex.value, 'class'));
 		context.builder.addValue(expression);
 		context.importsUsed.add('attributePart');
 	}
@@ -466,7 +466,7 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 	styleList(attr: JSXAttributeWithExpression, context: CompiledContext): void {
 		const expression = this.createStyleList(attr, context);
 
-		context.builder.addPart(CreateCompiledPart.attribute(context.currentIndex, 'style'));
+		context.builder.addPart(CreateCompiledPart.attribute(context.currentIndex.value, 'style'));
 		context.builder.addValue(expression);
 		context.importsUsed.add('attributePart');
 	}
@@ -474,7 +474,7 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 	event(attr: JSXAttributeWithExpression, context: CompiledContext): void {
 		const [ name, expression ] = this.createEvent(attr, context);
 
-		context.builder.addPart(CreateCompiledPart.event(context.currentIndex, name));
+		context.builder.addPart(CreateCompiledPart.event(context.currentIndex.value, name));
 		context.builder.addValue(expression);
 		context.importsUsed.add('eventPart');
 	}
@@ -482,7 +482,7 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 	expression(attr: JSXAttributeWithExpression, context: CompiledContext): void {
 		const [ name, expression ] = this.createExpression(attr, context);
 
-		context.builder.addPart(CreateCompiledPart.attribute(context.currentIndex, name));
+		context.builder.addPart(CreateCompiledPart.attribute(context.currentIndex.value, name));
 		context.builder.addValue(expression);
 		context.importsUsed.add('attributePart');
 	}
@@ -496,7 +496,7 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 	spread(attr: t.JSXSpreadAttribute, context: CompiledContext): void {
 		const expression = this.createSpread(attr, context);
 
-		context.builder.addPart(CreateCompiledPart.element(context.currentIndex));
+		context.builder.addPart(CreateCompiledPart.element(context.currentIndex.value));
 		context.builder.addValue(expression);
 	}
 
@@ -513,12 +513,12 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 		const { type, name, expression } = this.createValueBinding(attr, context);
 
 		if (type === 'prop') {
-			context.builder.addPart(CreateCompiledPart.property(context.currentIndex, name));
+			context.builder.addPart(CreateCompiledPart.property(context.currentIndex.value, name));
 			context.builder.addValue(expression);
 			context.importsUsed.add('propertyPart');
 		}
 		else if (type === 'bool') {
-			context.builder.addPart(CreateCompiledPart.boolean(context.currentIndex, name));
+			context.builder.addPart(CreateCompiledPart.boolean(context.currentIndex.value, name));
 			context.builder.addValue(expression);
 			context.importsUsed.add('booleanPart');
 		}

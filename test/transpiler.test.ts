@@ -661,7 +661,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { html as htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
-			const template = (Element: typeof MyComponent) => {
+			const template = (Element: ToComponent) => {
 			  const __$Element = __$literalMap.get(Element);
 			  return htmlStatic\`<\${__$Element}></\${__$Element}>\`;
 			};
@@ -794,6 +794,59 @@ suite('JSX to Lit Transpiler Tests', () => {
 			    };
 			  })
 			});
+		`));
+	});
+
+	test('correctly places function component in static template', ({ expect }) => {
+		const source = `
+		const render = () => <>
+			<s-top-actions>
+				<For each={ this.activitybar }>
+					{activity => <Icon url={as.prop(activity.icon)}></Icon>}
+				</For>
+			</s-top-actions>
+			<s-bottom-actions>
+				<For each={ this.activitybar }>
+					{activity => <Icon url={as.prop(activity.icon)}></Icon>}
+				</For>
+			</s-bottom-actions>
+		</>
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		expect(code).toBe(dedent(`
+		import { __$t } from "@arcmantle/lit-jsx";
+		const _temp = {
+		  "h": __$t\`<s-top-actions><?></s-top-actions><s-bottom-actions><?></s-bottom-actions>\`,
+		  "parts": [{
+		    "type": 2,
+		    "index": 1
+		  }, {
+		    "type": 2,
+		    "index": 3
+		  }]
+		};
+		const render = () => {
+		  return {
+		    "_$litType$": _temp,
+		    "values": [For({
+		      each: this.activitybar,
+		      children: activity => {
+		        return Icon({
+		          url: as.prop(activity.icon)
+		        });
+		      }
+		    }), For({
+		      each: this.activitybar,
+		      children: activity => {
+		        return Icon({
+		          url: as.prop(activity.icon)
+		        });
+		      }
+		    })]
+		  };
+		};
 		`));
 	});
 
@@ -1189,7 +1242,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 			    "index": 2
 			  }, {
 			    "type": 2,
-			    "index": 2
+			    "index": 3
 			  }]
 			};
 			const template = {
@@ -1346,7 +1399,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 			  "h": __$t\`<div class="table-container"><table><thead><tr><th>Name</th><th>Age</th><th>Actions</th></tr></thead><tbody><?></tbody></table></div>\`,
 			  "parts": [{
 			    "type": 2,
-			    "index": 3
+			    "index": 8
 			  }]
 			};
 			const TableRow = toTag('table-row');

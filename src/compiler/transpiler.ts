@@ -32,6 +32,10 @@ import {
 } from './config.js';
 
 
+const toCamelCase = (name: string) => name
+	.replace(/-([a-zA-Z])/g, (_, letter) => letter.toUpperCase());
+
+
 abstract class JSXTranspiler<TContext extends ProcessorContext> {
 
 	protected abstract createContext(path: NodePath<t.JSXElement | t.JSXFragment>): TContext;
@@ -258,8 +262,7 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 			}
 
 			const name = attr.name.name.toString();
-			const camelCaseName = name
-				.replace(/-([a-zA-Z])/g, (_, letter) => letter.toUpperCase());
+			const camelCaseName = toCamelCase(name);
 
 			let value: t.Expression;
 
@@ -333,7 +336,7 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 							...context,
 							path:             childPath,
 							builder:          new CompiledBuilder(),
-							currentIndex:     0,
+							currentIndex:     { value: 0 },
 							isInitialElement: false,
 						};
 
@@ -384,7 +387,7 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 
 export interface CompiledContext extends ProcessorContext {
 	builder:      CompiledBuilder;
-	currentIndex: number;
+	currentIndex: { value: number; };
 }
 
 export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
@@ -393,7 +396,7 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 		const context: CompiledContext = {
 			program:          getProgramFromPath(path),
 			path,
-			currentIndex:     0,
+			currentIndex:     { value: 0 },
 			tagName:          '',
 			isInitialElement: true,
 			builder:          new CompiledBuilder(),
@@ -447,14 +450,12 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 
 		// Close the opening tag
 		context.builder.addText('>');
+		context.currentIndex.value++;
 	}
 
 	override children(context: CompiledContext): void {
 		for (const childPath of context.path.get('children').values()) {
 			const child = childPath.node;
-
-			// Index is incremented to ensure correct part indices.
-			const partIndex = context.currentIndex + 1;
 
 			if (t.isJSXText(child)) {
 				if (WHITESPACE_TAGS.includes(context.tagName))
@@ -468,7 +469,7 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 
 				context.builder.addText('<?>');
 				context.builder.addValue(child.expression);
-				context.builder.addPart(CreateCompiledPart.child(partIndex));
+				context.builder.addPart(CreateCompiledPart.child(context.currentIndex.value));
 			}
 			else if (t.isJSXElement(child)) {
 				if (!isValidJSXElement(childPath))
@@ -478,7 +479,7 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 				this.process({
 					...context,
 					path:             childPath,
-					currentIndex:     partIndex,
+					currentIndex:     context.currentIndex,
 					isInitialElement: false,
 				});
 			}
@@ -518,8 +519,7 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 			}
 
 			const name = attr.name.name.toString();
-			const camelCaseName = name
-				.replace(/-([a-zA-Z])/g, (_, letter) => letter.toUpperCase());
+			const camelCaseName = toCamelCase(name);
 
 			let value: t.Expression;
 
@@ -573,7 +573,7 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 					const templateType = getTemplateType(childPath);
 
 					if (isStatic || templateType !== 'html') {
-					// Create a new builder for this child element
+						// Create a new builder for this child element
 						const childContext: TemplateContext = {
 							...context,
 							literalName:      '',
@@ -594,7 +594,7 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 							...context,
 							path:             childPath,
 							builder:          new CompiledBuilder(),
-							currentIndex:     context.currentIndex + 1,
+							currentIndex:     { ...context.currentIndex },
 							isInitialElement: false,
 						};
 
@@ -636,7 +636,9 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 
 		context.builder.addText('<?>');
 		context.builder.addValue(expression);
-		context.builder.addPart(CreateCompiledPart.child(context.currentIndex + 1));
+
+		context.builder.addPart(CreateCompiledPart.child(context.currentIndex.value));
+		context.currentIndex.value++;
 	}
 
 }

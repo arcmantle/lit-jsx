@@ -1,7 +1,5 @@
 import * as t from '@babel/types';
 
-import { CreateCompiledPart } from './attribute-processor.js';
-
 
 export class TemplateBuilder {
 
@@ -57,11 +55,6 @@ export class CompiledBuilder {
 
 	addValue(value: t.Expression): void {
 		this.values.push(value);
-	}
-
-	addChild(index: number, value: t.Expression): void {
-		this.addPart(CreateCompiledPart.child(index));
-		this.addValue(value);
 	}
 
 	createCompiledTemplate(): t.ObjectExpression {

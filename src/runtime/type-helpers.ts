@@ -27,12 +27,10 @@ export const toComponent = <T extends { new(...args: any): any; tagName: string;
 	if (!element.tagName)
 		throw new Error('Element must have a static tagName property');
 
-	queueMicrotask(() => {
-		if ('register' in element && typeof element.register === 'function')
-			element.register();
-		else if (!customElements.get(element.tagName))
-			customElements.define(element.tagName, element);
-	});
+	if ('register' in element && typeof element.register === 'function')
+		element.register();
+	else if (!customElements.get(element.tagName))
+		customElements.define(element.tagName, element);
 
 	return element.tagName as any;
 };
