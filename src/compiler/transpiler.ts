@@ -419,8 +419,12 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 
 		if (isJSXFunctionElementComponent(context.path)) {
 			// Process attributes and children into a props object
-			if (!context.isInitialElement)
-				return this.functionalComponent(context);
+			if (!context.isInitialElement) {
+				this.functionalComponent(context);
+				context.currentIndex.value++;
+
+				return;
+			}
 
 			// If this is the initial element, this should not happen.
 			// and it should instead have been processed as a single expression.
@@ -638,7 +642,6 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 		context.builder.addValue(expression);
 
 		context.builder.addPart(CreateCompiledPart.child(context.currentIndex.value));
-		context.currentIndex.value++;
 	}
 
 }
