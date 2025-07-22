@@ -9,7 +9,7 @@ const getOpts = (): babel.TransformOptions => ({
 	root:           '.',
 	filename:       'test.tsx',
 	sourceFileName: 'test.tsx',
-	plugins:        [ litJsxBabelPlugin() ],
+	plugins:        [ litJsxBabelPlugin({ useCompiledTemplates: true }) ],
 	ast:            false,
 	sourceMaps:     false,
 	configFile:     false,

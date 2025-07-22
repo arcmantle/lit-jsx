@@ -4,6 +4,7 @@ import type { JSXElement, JSXFragment } from '@babel/types';
 import { isJSXElement, isJSXFragment } from '@babel/types';
 
 import { getTemplateType, isJSXElementStatic, isJSXFunctionElementComponent } from './compiler-utils.js';
+import { options } from './config.js';
 import { CompiledTranspiler, TemplateTranspiler } from './transpiler.js';
 
 
@@ -36,6 +37,9 @@ const processJSXElement = (path: NodePath<JSXElement | JSXFragment>) => {
 	if (isStatic || templateType !== 'html')
 		return new TemplateTranspiler().start(path);
 
-	// A non static, non function component can be transpiled using the compiled transpiler.
-	return new CompiledTranspiler().start(path);
+	if (options.useCompiledTemplates)
+		// A non static, non function component can be transpiled using the compiled transpiler.
+		return new CompiledTranspiler().start(path);
+	else
+		return new TemplateTranspiler().start(path);
 };

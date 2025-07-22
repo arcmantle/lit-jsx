@@ -15,9 +15,11 @@ import { ImportDiscovery } from './import-discovery.js';
  */
 export const litJsx = (options: {
 	/**  Enable legacy decorators support */
-	legacyDecorators?: boolean;
+	legacyDecorators?:     boolean;
+	/** Enables experimental support for compiled templates */
+	useCompiledTemplates?: boolean;
 	/** Enable debug mode for additional logging */
-	debug?:            boolean;
+	debug?:                boolean;
 	/** Options for the Babel transform */
 	babel?:
 		| babel.TransformOptions
@@ -60,12 +62,16 @@ export const litJsx = (options: {
 						root:           projectRoot,
 						filename:       id,
 						sourceFileName: id,
-						plugins:        [ litJsxBabelPlugin() ],
-						ast:            false,
-						sourceMaps:     true,
-						configFile:     false,
-						babelrc:        false,
-						parserOpts:     {
+						plugins:        [
+							litJsxBabelPlugin({
+								useCompiledTemplates: options.useCompiledTemplates,
+							}),
+						],
+						ast:        false,
+						sourceMaps: true,
+						configFile: false,
+						babelrc:    false,
+						parserOpts: {
 							plugins: finalBabelPlugins,
 						},
 					};

@@ -16,7 +16,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		return {
 			filename:   import.meta.filename,
-			plugins:    [ litJsxBabelPlugin() ],
+			plugins:    [ litJsxBabelPlugin({ useCompiledTemplates: true }) ],
 			ast:        false,
 			sourceMaps: true,
 			configFile: false,

@@ -27,6 +27,7 @@ import {
 import {
 	COMPONENT_LITERAL_PREFIX,
 	ERROR_MESSAGES,
+	options,
 	VARIABLES,
 	WHITESPACE_TAGS,
 } from './config.js';
@@ -316,7 +317,7 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 					const isStatic = isJSXElementStatic(childPath);
 					const templateType = getTemplateType(childPath);
 
-					if (isStatic || templateType !== 'html') {
+					if (isStatic || templateType !== 'html' || !options.useCompiledTemplates) {
 						// Create a new builder for this child element
 						const childContext: TemplateContext = {
 							...context,

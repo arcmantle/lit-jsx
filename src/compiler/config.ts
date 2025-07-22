@@ -1,3 +1,5 @@
+import type { BabelFile, PluginPass } from '@babel/core';
+
 export type BabelPlugins = NonNullable<NonNullable<babel.TransformOptions['parserOpts']>['plugins']>;
 
 
@@ -82,3 +84,28 @@ export const ERROR_MESSAGES = {
 	BODY_NOT_BLOCK:             (tagName: string): string => `The body of the function returning '${ tagName }' `
 		+ `must be a block statement.`,
 } as const;
+
+
+export const initializePluginOptions = (file: BabelFile): { useCompiledTemplates?: boolean; } => {
+	if (optionsInitialized)
+		return options;
+
+	optionsInitialized = true;
+
+	const plugin = file.opts?.plugins
+		?.find(plugin => (plugin as PluginPass).key === 'lit-jsx-transform') as { options?: { useCompiledTemplates?: boolean; }; };
+
+	const pluginOptions = plugin?.options || {};
+
+	for (const [ key, value ] of Object.entries(pluginOptions))
+		options[key as keyof typeof options] = value as any;
+
+	console.log(`Lit JSX plugin options initialized:`, options);
+
+
+	return pluginOptions;
+};
+
+
+let optionsInitialized = false;
+export const options: { useCompiledTemplates?: boolean; } = {};
