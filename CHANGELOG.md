@@ -5,6 +5,12 @@ All notable changes to jsx-lit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project tries to adhere with [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.28] - 2025-07-23
+
+- Compiled templates are now turned off by default as they are still experimental
+- Compiled templates can be enabled by setting the appropriate configuration option
+- This change addresses potential bugs related to nested child rendering
+
 ## [1.0.15] - 2025-07-19
 
 - Identified and attempted fix for an issue with compiled parts indexes
