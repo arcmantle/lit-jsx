@@ -428,11 +428,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Button = toTag('custom-button');
 			const __$Button = __$literalMap.get(Button);
-			const template = htmlStatic\`<\${__$Button}>Click me</\${__$Button}>\`;
+			const template = __$htmlStatic\`<\${__$Button}>Click me</\${__$Button}>\`;
 		`));
 	});
 
@@ -447,11 +447,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Button = toTag('custom-button');
 			const __$Button = __$literalMap.get(Button);
-			const template = htmlStatic\`<\${__$Button} type="submit" variant="primary">Submit</\${__$Button}>\`;
+			const template = __$htmlStatic\`<\${__$Button} type="submit" variant="primary">Submit</\${__$Button}>\`;
 		`));
 	});
 
@@ -467,12 +467,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Button = toTag('custom-button');
 			const __$Button = __$literalMap.get(Button);
 			const variant = 'primary';
-			const template = htmlStatic\`<\${__$Button} variant=\${variant}>Dynamic</\${__$Button}>\`;
+			const template = __$htmlStatic\`<\${__$Button} variant=\${variant}>Dynamic</\${__$Button}>\`;
 		`));
 	});
 
@@ -487,11 +487,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Icon = toTag('custom-button');
 			const __$Icon = __$literalMap.get(Icon);
-			const template = htmlStatic\`<\${__$Icon} name="star"></\${__$Icon}>\`;
+			const template = __$htmlStatic\`<\${__$Icon} name="star"></\${__$Icon}>\`;
 		`));
 	});
 
@@ -505,8 +505,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { svg } from "lit-html/directives/svg.js";
-			const template = svg\`<circle cx="50" cy="50" r="40"></circle>\`;
+			import { svg as __$svg } from "lit-html/directives/svg.js";
+			const template = __$svg\`<circle cx="50" cy="50" r="40"></circle>\`;
 		`));
 	});
 
@@ -519,9 +519,9 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { svg } from "lit-html/directives/svg.js";
+			import { svg as __$svg } from "lit-html/directives/svg.js";
 			const radius = 40;
-			const template = svg\`<circle cx="50" cy="50" r=\${radius}></circle>\`;
+			const template = __$svg\`<circle cx="50" cy="50" r=\${radius}></circle>\`;
 		`));
 	});
 
@@ -559,8 +559,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { mathml } from "lit-html/directives/mathml.js";
-			const template = mathml\`<mi>x</mi>\`;
+			import { mathml as __$mathml } from "lit-html/directives/mathml.js";
+			const template = __$mathml\`<mi>x</mi>\`;
 		`));
 	});
 
@@ -578,8 +578,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { mathml } from "lit-html/directives/mathml.js";
-			const template = mathml\`<mrow><mi>x</mi><mo>+</mo><mi>y</mi></mrow>\`;
+			import { mathml as __$mathml } from "lit-html/directives/mathml.js";
+			const template = __$mathml\`<mrow><mi>x</mi><mo>+</mo><mi>y</mi></mrow>\`;
 		`));
 	});
 
@@ -623,12 +623,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const MyComponent = toComponent('my-component');
 			const template = (Element: typeof MyComponent) => {
 			  const __$Element = __$literalMap.get(Element);
-			  return htmlStatic\`<\${__$Element}></\${__$Element}>\`;
+			  return __$htmlStatic\`<\${__$Element}></\${__$Element}>\`;
 			};
 		`));
 	});
@@ -640,11 +640,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const template = (Element: ToComponent) => {
 			  const __$Element = __$literalMap.get(Element);
-			  return htmlStatic\`<\${__$Element}></\${__$Element}>\`;
+			  return __$htmlStatic\`<\${__$Element}></\${__$Element}>\`;
 			};
 		`));
 	});
@@ -659,11 +659,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const template = (Element: ToComponent) => {
 			  const __$Element = __$literalMap.get(Element);
-			  return htmlStatic\`<\${__$Element}></\${__$Element}>\`;
+			  return __$htmlStatic\`<\${__$Element}></\${__$Element}>\`;
 			};
 		`));
 	});
@@ -909,7 +909,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { ref } from "lit-html/directives/ref.js";
+			import { ref as __$ref } from "lit-html/directives/ref.js";
 			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div>Content</div>\`,
@@ -920,7 +920,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 			};
 			const template = {
 			  "_$litType$": _temp,
-			  "values": [ref(this.elementRef)]
+			  "values": [__$ref(this.elementRef)]
 			};
 		`));
 	});
@@ -965,7 +965,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap, __$rest } from "@arcmantle/lit-jsx";
 			const Button = toTag('custom-button');
 			const __$Button = __$literalMap.get(Button);
@@ -973,7 +973,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 			  variant: 'primary',
 			  size: 'large'
 			};
-			const template = htmlStatic\`<\${__$Button} \${__$rest(props)}>Submit</\${__$Button}>\`;
+			const template = __$htmlStatic\`<\${__$Button} \${__$rest(props)}>Submit</\${__$Button}>\`;
 		`));
 	});
 
@@ -1048,11 +1048,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Element = toTag('custom-element');
 			const __$Element = __$literalMap.get(Element);
-			const template = htmlStatic\`<div><\${__$Element}>Nested content</\${__$Element}></div>\`;
+			const template = __$htmlStatic\`<div><\${__$Element}>Nested content</\${__$Element}></div>\`;
 		`));
 	});
 
@@ -1069,11 +1069,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Element = toTag('custom-element');
 			const __$Element = __$literalMap.get(Element);
-			const template = htmlStatic\`<\${__$Element}><div>Regular content</\${__$Element}></\${__$Element}>\`;
+			const template = __$htmlStatic\`<\${__$Element}><div>Regular content</\${__$Element}></\${__$Element}>\`;
 		`));
 	});
 
@@ -1092,11 +1092,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Element = toTag('custom-element');
 			const __$Element = __$literalMap.get(Element);
-			const template = htmlStatic\`<div>Compiled content</div><\${__$Element}>Standard content</\${__$Element}>\${MyComponent({
+			const template = __$htmlStatic\`<div>Compiled content</div><\${__$Element}>Standard content</\${__$Element}>\${MyComponent({
 			  children: "Function component"
 			})}\`;
 		`));
@@ -1127,14 +1127,14 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { toTag, __$literalMap } from "@arcmantle/lit-jsx";
 			const Icon = function () {};
 			const Card = toTag('ui-card');
 			const __$Card = __$literalMap.get(Card);
 			const Button = toTag('ui-button');
 			const __$Button = __$literalMap.get(Button);
-			const template = htmlStatic\`<div class="container"><\${__$Card} title="Card Title"><div class="content"><p>Some text content</\${__$Card}><\${__$Button} variant="primary">\${Icon({
+			const template = __$htmlStatic\`<div class="container"><\${__$Card} title="Card Title"><div class="content"><p>Some text content</\${__$Card}><\${__$Button} variant="primary">\${Icon({
 			  name: "save"
 			})}Save</\${__$Button}></\${__$Card}></\${__$Card}></div>\`;
 		`));
@@ -1339,14 +1339,14 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const FormField = toTag('form-field');
 			const __$FormField = __$literalMap.get(FormField);
 			const Button = toTag('custom-button');
 			const __$Button = __$literalMap.get(Button);
 			const isSubmitting = false;
-			const template = htmlStatic\`<form onSubmit=\${handleSubmit}><\${__$FormField} label="Username" required><input type="text" value=\${formData.username} onChange=\${handleChange} ?disabled=\${isSubmitting}></\${__$FormField}></\${__$FormField}><\${__$FormField} label="Email"><input type="email" value=\${formData.email} onChange=\${handleChange}></\${__$FormField}></\${__$FormField}><div class="form-actions"><\${__$Button} type="submit" variant="primary" ?disabled=\${isSubmitting} \${loading(isSubmitting)}>\${isSubmitting ? 'Submitting...' : 'Submit'}</\${__$Button}>\${ValidationMessages({
+			const template = __$htmlStatic\`<form onSubmit=\${handleSubmit}><\${__$FormField} label="Username" required><input type="text" value=\${formData.username} onChange=\${handleChange} ?disabled=\${isSubmitting}></\${__$FormField}></\${__$FormField}><\${__$FormField} label="Email"><input type="email" value=\${formData.email} onChange=\${handleChange}></\${__$FormField}></\${__$FormField}><div class="form-actions"><\${__$Button} type="submit" variant="primary" ?disabled=\${isSubmitting} \${loading(isSubmitting)}>\${isSubmitting ? 'Submitting...' : 'Submit'}</\${__$Button}>\${ValidationMessages({
 			  errors: errors
 			})}</div></form>\`;
 		`));
@@ -1393,7 +1393,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$t, __$literalMap } from "@arcmantle/lit-jsx";
 			const _temp = {
 			  "h": __$t\`<div class="table-container"><table><thead><tr><th>Name</th><th>Age</th><th>Actions</th></tr></thead><tbody><?></tbody></table></div>\`,
@@ -1409,7 +1409,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 			const template = {
 			  "_$litType$": _temp,
 			  "values": [users.map(user => {
-			    return htmlStatic\`<\${__$TableRow} key=\${user.id}><\${__$TableCell}>\${user.name}</\${__$TableCell}><\${__$TableCell}>\${user.age}</\${__$TableCell}><\${__$TableCell}>\${ActionButton({
+			    return __$htmlStatic\`<\${__$TableRow} key=\${user.id}><\${__$TableCell}>\${user.name}</\${__$TableCell}><\${__$TableCell}>\${user.age}</\${__$TableCell}><\${__$TableCell}>\${ActionButton({
 			      onClick: prop => () => editUser(user.id),
 			      icon: "edit"
 			    })}\${ActionButton({
@@ -1475,7 +1475,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Card = toTag('ui-card');
 			const __$Card = __$literalMap.get(Card);
@@ -1483,7 +1483,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 			const __$Grid = __$literalMap.get(Grid);
 			const Sidebar = toTag('ui-sidebar');
 			const __$Sidebar = __$literalMap.get(Sidebar);
-			const template = htmlStatic\`<div class="dashboard"><header class="dashboard-header"><h1>Dashboard</h1>\${UserMenu({
+			const template = __$htmlStatic\`<div class="dashboard"><header class="dashboard-header"><h1>Dashboard</h1>\${UserMenu({
 			  user: currentUser
 			})}</header><div class="dashboard-body"><\${__$Sidebar} position="left">\${NavigationMenu({
 			  items: menuItems
@@ -1561,7 +1561,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as htmlStatic } from "lit-html/static.js";
+			import { html as __$htmlStatic } from "lit-html/static.js";
 			import { __$literalMap } from "@arcmantle/lit-jsx";
 			const Modal = toTag('ui-modal');
 			const __$Modal = __$literalMap.get(Modal);
@@ -1569,11 +1569,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 			const __$Portal = __$literalMap.get(Portal);
 			const Button = toTag('ui-button');
 			const __$Button = __$literalMap.get(Button);
-			const template = htmlStatic\`<\${__$Portal} target="body"><\${__$Modal} ?open=\${isOpen} onClose=\${handleClose} \${trapFocus()} \${preventScroll()} \${clickOutside(handleClose)}><div class="modal-header"><h2>\${title}</\${__$Modal}><\${__$Button} variant="ghost" size="small" onClick=\${handleClose} aria-label="Close">\${CloseIcon({})}</\${__$Button}></\${__$Modal}><div class="modal-body">\${content || DefaultContent({
+			const template = __$htmlStatic\`<\${__$Portal} target="body"><\${__$Modal} ?open=\${isOpen} onClose=\${handleClose} \${trapFocus()} \${preventScroll()} \${clickOutside(handleClose)}><div class="modal-header"><h2>\${title}</\${__$Modal}><\${__$Button} variant="ghost" size="small" onClick=\${handleClose} aria-label="Close">\${CloseIcon({})}</\${__$Button}></\${__$Modal}><div class="modal-body">\${content || DefaultContent({
 			  type: contentType,
 			  data: contentData
 			})}</\${__$Modal}><div class="modal-footer">\${actions.map(action => {
-			  return htmlStatic\`<\${__$Button} key=\${action.id} variant=\${action.variant || 'secondary'} onClick=\${action.handler} ?disabled=\${action.disabled}>\${action.label}</\${__$Button}>\`;
+			  return __$htmlStatic\`<\${__$Button} key=\${action.id} variant=\${action.variant || 'secondary'} onClick=\${action.handler} ?disabled=\${action.disabled}>\${action.label}</\${__$Button}>\`;
 			})}</\${__$Modal}></\${__$Modal}></\${__$Portal}>\`;
 		`));
 	});

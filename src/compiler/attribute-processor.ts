@@ -272,7 +272,7 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 
 		// add a ref call around the expression.
 		const expression = t.callExpression(
-			t.identifier(VARIABLES.REF),
+			t.identifier(VARIABLES.REF_LOCAL),
 			[ attr.value.expression ],
 		);
 
@@ -284,7 +284,7 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 
 		// add a classMap call around the expression.
 		const expression = t.callExpression(
-			t.identifier(VARIABLES.CLASS_MAP),
+			t.identifier(VARIABLES.CLASS_MAP_LOCAL),
 			[ attr.value.expression ],
 		);
 
@@ -296,7 +296,7 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 
 		// add a styleMap call around the expression.
 		const expression = t.callExpression(
-			t.identifier(VARIABLES.STYLE_MAP),
+			t.identifier(VARIABLES.STYLE_MAP_LOCAL),
 			[ attr.value.expression ],
 		);
 

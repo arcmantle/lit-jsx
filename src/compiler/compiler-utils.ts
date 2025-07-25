@@ -427,7 +427,12 @@ export class EnsureImport {
 			(source) => source === SOURCES.HTML || source === SOURCES.HTML_ALT,
 			(name) => name === VARIABLES.HTML,
 			() => t.importDeclaration(
-				[ t.importSpecifier(t.identifier(VARIABLES.HTML), t.identifier(VARIABLES.HTML)) ],
+				[
+					t.importSpecifier(
+						t.identifier(VARIABLES.HTML_LOCAL),
+						t.identifier(VARIABLES.HTML),
+					),
+				],
 				t.stringLiteral(SOURCES.HTML),
 			),
 			program,
@@ -442,8 +447,8 @@ export class EnsureImport {
 			() => t.importDeclaration(
 				[
 					t.importSpecifier(
+						t.identifier(VARIABLES.HTML_STATIC_LOCAL),
 						t.identifier(VARIABLES.HTML_STATIC),
-						t.identifier(VARIABLES.HTML),
 					),
 				],
 				t.stringLiteral(SOURCES.HTML_STATIC),
@@ -458,7 +463,12 @@ export class EnsureImport {
 			(source) => source === SOURCES.SVG || source === SOURCES.SVG_ALT,
 			(name) => name === VARIABLES.SVG,
 			() => t.importDeclaration(
-				[ t.importSpecifier(t.identifier(VARIABLES.SVG), t.identifier(VARIABLES.SVG)) ],
+				[
+					t.importSpecifier(
+						t.identifier(VARIABLES.SVG_LOCAL),
+						t.identifier(VARIABLES.SVG),
+					),
+				],
 				t.stringLiteral(SOURCES.SVG),
 			),
 			program,
@@ -473,8 +483,8 @@ export class EnsureImport {
 			() => t.importDeclaration(
 				[
 					t.importSpecifier(
+						t.identifier(VARIABLES.SVG_STATIC_LOCAL),
 						t.identifier(VARIABLES.SVG_STATIC),
-						t.identifier(VARIABLES.SVG),
 					),
 				],
 				t.stringLiteral(SOURCES.SVG_STATIC),
@@ -489,7 +499,12 @@ export class EnsureImport {
 			(source) => source === SOURCES.MATHML || source === SOURCES.MATHML_ALT,
 			(name) => name === VARIABLES.MATHML,
 			() => t.importDeclaration(
-				[ t.importSpecifier(t.identifier(VARIABLES.MATHML), t.identifier(VARIABLES.MATHML)) ],
+				[
+					t.importSpecifier(
+						t.identifier(VARIABLES.MATHML_LOCAL),
+						t.identifier(VARIABLES.MATHML),
+					),
+				],
 				t.stringLiteral(SOURCES.MATHML),
 			),
 			program,
@@ -504,8 +519,8 @@ export class EnsureImport {
 			() => t.importDeclaration(
 				[
 					t.importSpecifier(
+						t.identifier(VARIABLES.MATHML_STATIC_LOCAL),
 						t.identifier(VARIABLES.MATHML_STATIC),
-						t.identifier(VARIABLES.MATHML),
 					),
 				],
 				t.stringLiteral(SOURCES.MATHML_STATIC),
@@ -522,7 +537,7 @@ export class EnsureImport {
 			() => t.importDeclaration(
 				[
 					t.importSpecifier(
-						t.identifier(VARIABLES.UNSAFE_STATIC),
+						t.identifier(VARIABLES.UNSAFE_STATIC_LOCAL),
 						t.identifier(VARIABLES.UNSAFE_STATIC),
 					),
 				],
@@ -540,7 +555,7 @@ export class EnsureImport {
 			() => t.importDeclaration(
 				[
 					t.importSpecifier(
-						t.identifier(VARIABLES.REF),
+						t.identifier(VARIABLES.REF_LOCAL),
 						t.identifier(VARIABLES.REF),
 					),
 				],
@@ -558,7 +573,7 @@ export class EnsureImport {
 			() => t.importDeclaration(
 				[
 					t.importSpecifier(
-						t.identifier(VARIABLES.STYLE_MAP),
+						t.identifier(VARIABLES.STYLE_MAP_LOCAL),
 						t.identifier(VARIABLES.STYLE_MAP),
 					),
 				],
@@ -576,7 +591,7 @@ export class EnsureImport {
 			() => t.importDeclaration(
 				[
 					t.importSpecifier(
-						t.identifier(VARIABLES.CLASS_MAP),
+						t.identifier(VARIABLES.CLASS_MAP_LOCAL),
 						t.identifier(VARIABLES.CLASS_MAP),
 					),
 				],

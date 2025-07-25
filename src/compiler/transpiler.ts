@@ -206,17 +206,17 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 
 		if (isStatic) {
 			if (templateType === VARIABLES.HTML) {
-				identifier = VARIABLES.HTML_STATIC;
+				identifier = VARIABLES.HTML_STATIC_LOCAL;
 				context.importsUsed.add('htmlStatic');
 			}
 			// This will not happen, as svg and mathml dynamic tags are not supported yet.
 			else if (templateType === VARIABLES.SVG) {
-				identifier = VARIABLES.SVG_STATIC;
+				identifier = VARIABLES.SVG_STATIC_LOCAL;
 				context.importsUsed.add('svgStatic');
 			}
 			// This will not happen, as svg and mathml dynamic tags are not supported yet.
 			else if (templateType === VARIABLES.MATHML) {
-				identifier = VARIABLES.MATHML_STATIC;
+				identifier = VARIABLES.MATHML_STATIC_LOCAL;
 				context.importsUsed.add('mathmlStatic');
 			}
 			else {
@@ -225,15 +225,15 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 		}
 		else {
 			if (templateType === VARIABLES.HTML) {
-				identifier = VARIABLES.HTML;
+				identifier = VARIABLES.HTML_LOCAL;
 				context.importsUsed.add('html');
 			}
 			else if (templateType === VARIABLES.SVG) {
-				identifier = VARIABLES.SVG;
+				identifier = VARIABLES.SVG_LOCAL;
 				context.importsUsed.add('svg');
 			}
 			else if (templateType === VARIABLES.MATHML) {
-				identifier = VARIABLES.MATHML;
+				identifier = VARIABLES.MATHML_LOCAL;
 				context.importsUsed.add('mathml');
 			}
 			else {
