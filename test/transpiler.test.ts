@@ -1577,4 +1577,48 @@ suite('JSX to Lit Transpiler Tests', () => {
 			})}</\${__$Modal}></\${__$Modal}></\${__$Portal}>\`;
 		`));
 	});
+
+	// TODO, try to figure out the case that breaks the current compiled templates.
+	test('correctly sets index of children from two different functions', ({ expect }) => {
+		const source = `
+
+		const subTemplate1 = <>
+		{<span>Header</span>}
+		</>;
+
+		const subTemplate2 = <>
+		{<span>Footer</span>}
+		</>;
+
+		const template = (
+			<div>
+				{subTemplate1}
+				{subTemplate2}
+			</div>
+		);
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		console.log(code);
+
+
+		//expect(code).toBe(dedent(`
+		//	import { __$t } from "@arcmantle/lit-jsx";
+		//	const _temp = {
+		//	  "h": __$t\`<div><?></div>\`,
+		//	  "parts": [{
+		//	    "type": 2,
+		//	    "index": 1
+		//	  }, {
+		//	    "type": 2,
+		//	    "index": 2
+		//	  }]
+		//	};
+		//	const template = {
+		//	  "_$litType$": _temp,
+		//	  "values": [this.renderHeader(), this.renderFooter()]
+		//	};
+		//`));
+	});
 });
