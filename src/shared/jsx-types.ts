@@ -710,7 +710,10 @@ declare global {
 				| 'numeric'
 				| 'decimal'
 				| 'search';
-			}> {}
+			}> {
+			/** Tells the compiler to compile this Functional Component using its tag as a static literal */
+			static?: boolean;
+		}
 		interface AnchorHTMLAttributes<T> extends
 			HTMLAttributes<T>,
 			CanBeNothing<{

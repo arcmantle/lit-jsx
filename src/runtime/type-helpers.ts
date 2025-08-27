@@ -35,7 +35,8 @@ export const toComponent = <T extends { new(...args: any): any; tagName: string;
 	return element.tagName as any;
 };
 
-export type ToComponent<T extends object = object> = (props: JSX.JSXProps<T>) => string;
+export type ToComponent<T extends object = object> =
+	(props: JSX.JSXProps<T> & { static: boolean; }) => string;
 
 
 /**
@@ -77,9 +78,10 @@ export type ToComponent<T extends object = object> = (props: JSX.JSXProps<T>) =>
  * @param tag - The HTML tag name (standard HTML elements or custom element names)
  * @returns A tag identifier that the compiler recognizes for optimization
  */
-export const toTag = <T extends keyof HTMLElementTagNameMap | (string & {})>(
+export const toTag = <T extends keyof JSX.IntrinsicElements>(
 	tag: T,
-): T => tag;
+): (props: JSX.IntrinsicElements[T] & { static: boolean; }) => string => tag as any;
 
 
-export type ToTag<T extends keyof HTMLElementTagNameMap | (string & {}) = string> = T;
+export type ToTag<T extends keyof JSX.IntrinsicElements> =
+	(props: JSX.IntrinsicElements[T] & { static: boolean; }) => string;
