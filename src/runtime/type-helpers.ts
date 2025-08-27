@@ -36,7 +36,7 @@ export const toComponent = <T extends { new(...args: any): any; tagName: string;
 };
 
 export type ToComponent<T extends object = object> =
-	(props: JSX.JSXProps<T> & { static: boolean; }) => string;
+	(props: JSX.JSXProps<T> & { static: any; }) => string;
 
 
 /**
@@ -80,8 +80,8 @@ export type ToComponent<T extends object = object> =
  */
 export const toTag = <T extends keyof JSX.IntrinsicElements>(
 	tag: T,
-): (props: JSX.IntrinsicElements[T] & { static: boolean; }) => string => tag as any;
+): ToTag<T> => tag as any;
 
 
 export type ToTag<T extends keyof JSX.IntrinsicElements> =
-	(props: JSX.IntrinsicElements[T] & { static: boolean; }) => string;
+	(props: JSX.IntrinsicElements[T] & { static: any; }) => string;
