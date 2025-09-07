@@ -100,19 +100,9 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "@arcmantle/lit-jsx";
-			const _temp = {
-			  "h": __$t\`<div>Hello<?></div>\`,
-			  "parts": [{
-			    "type": 2,
-			    "index": 1
-			  }]
-			};
-			const name = 'World';
-			const template = {
-			  "_$litType$": _temp,
-			  "values": [name]
-			};
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		const name = 'World';
+		const template = __$htmlStatic\`<div>Hello \${name}</div>\`;
 		`));
 	});
 
@@ -126,23 +116,10 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "@arcmantle/lit-jsx";
-			const _temp = {
-			  "h": __$t\`<div><?><?></div>\`,
-			  "parts": [{
-			    "type": 2,
-			    "index": 1
-			  }, {
-			    "type": 2,
-			    "index": 1
-			  }]
-			};
-			const first = 'Hello';
-			const second = 'World';
-			const template = {
-			  "_$litType$": _temp,
-			  "values": [first, second]
-			};
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		const first = 'Hello';
+		const second = 'World';
+		const template = __$htmlStatic\`<div>\${first} \${second}</div>\`;
 		`));
 	});
 
@@ -155,25 +132,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "@arcmantle/lit-jsx";
-			const _temp = {
-			  "h": __$t\`<div>User:<?>(<?>years old)</div>\`,
-			  "parts": [{
-			    "type": 2,
-			    "index": 1
-			  }, {
-			    "type": 2,
-			    "index": 1
-			  }]
-			};
-			const user = {
-			  name: 'John',
-			  age: 30
-			};
-			const template = {
-			  "_$litType$": _temp,
-			  "values": [user.name, user.age]
-			};
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		const user = {
+		  name: 'John',
+		  age: 30
+		};
+		const template = __$htmlStatic\`<div>User: \${user.name} (\${user.age} years old)</div>\`;
 		`));
 	});
 
@@ -186,19 +150,9 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "@arcmantle/lit-jsx";
-			const _temp = {
-			  "h": __$t\`<div><?></div>\`,
-			  "parts": [{
-			    "type": 2,
-			    "index": 1
-			  }]
-			};
-			const isLoggedIn = true;
-			const template = {
-			  "_$litType$": _temp,
-			  "values": [isLoggedIn ? 'Welcome' : 'Please log in']
-			};
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		const isLoggedIn = true;
+		const template = __$htmlStatic\`<div>\${isLoggedIn ? 'Welcome' : 'Please log in'}</div>\`;
 		`));
 	});
 
@@ -422,7 +376,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		import { toTag } from "@arcmantle/lit-jsx";
 
 		const Button = toTag('custom-button');
-		const template = <Button>Click me</Button>;
+		const template = <Button static>Click me</Button>;
 		`;
 
 		const code = babel.transformSync(source, getOpts())?.code;
@@ -441,7 +395,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		import { toTag } from "@arcmantle/lit-jsx";
 
 		const Button = toTag('custom-button');
-		const template = <Button type="submit" variant="primary">Submit</Button>;
+		const template = <Button type="submit" variant="primary" static>Submit</Button>;
 		`;
 
 		const code = babel.transformSync(source, getOpts())?.code;
@@ -461,7 +415,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		const Button = toTag('custom-button');
 		const variant = 'primary';
-		const template = <Button variant={variant}>Dynamic</Button>;
+		const template = <Button variant={variant} static>Dynamic</Button>;
 		`;
 
 		const code = babel.transformSync(source, getOpts())?.code;
@@ -481,7 +435,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		import { toTag } from "@arcmantle/lit-jsx";
 
 		const Icon = toTag('custom-button');
-		const template = <Icon name="star" />;
+		const template = <Icon name="star" static />;
 		`;
 
 		const code = babel.transformSync(source, getOpts())?.code;
@@ -618,7 +572,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 	test('correctly finds parameter to be custom-element with typeof annotation', ({ expect }) => {
 		const source = `
 		const MyComponent = toComponent('my-component');
-		const template = (Element: typeof MyComponent) => <Element />;
+		const template = (Element: typeof MyComponent) => <Element static />;
 		`;
 		const code = babel.transformSync(source, getOpts())?.code;
 
@@ -635,7 +589,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 	test('correctly finds parameter to be custom-element with ToComponent annotation', ({ expect }) => {
 		const source = `
-		const template = (Element: ToComponent) => <Element />;
+		const template = (Element: ToComponent) => <Element static />;
 		`;
 		const code = babel.transformSync(source, getOpts())?.code;
 
@@ -652,7 +606,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 	test('correctly places dynamic tag variables in function with block scope', ({ expect }) => {
 		const source = `
 		const template = (Element: ToComponent) => {
-			return <Element />
+			return <Element static />
 		};
 		`;
 
@@ -771,29 +725,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t, AttributePart } from "@arcmantle/lit-jsx";
-			const _temp = {
-			  "h": __$t\`<li><?></li>\`,
-			  "parts": [{
-			    "type": 1,
-			    "index": 0,
-			    "name": "key",
-			    "strings": ["", ""],
-			    "ctor": AttributePart
-			  }, {
-			    "type": 2,
-			    "index": 1
-			  }]
-			};
-			const items = ['a', 'b', 'c'];
-			const template = List({
-			  children: items.map(item => {
-			    return {
-			      "_$litType$": _temp,
-			      "values": [item, item]
-			    };
-			  })
-			});
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		const items = ['a', 'b', 'c'];
+		const template = List({
+		  children: items.map(item => {
+		    return __$htmlStatic\`<li key=\${item}>\${item}</li>\`;
+		  })
+		});
 		`));
 	});
 
@@ -816,36 +754,23 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-		import { __$t } from "@arcmantle/lit-jsx";
-		const _temp = {
-		  "h": __$t\`<s-top-actions><?></s-top-actions><s-bottom-actions><?></s-bottom-actions>\`,
-		  "parts": [{
-		    "type": 2,
-		    "index": 1
-		  }, {
-		    "type": 2,
-		    "index": 3
-		  }]
-		};
+		import { html as __$htmlStatic } from "lit-html/static.js";
 		const render = () => {
-		  return {
-		    "_$litType$": _temp,
-		    "values": [For({
-		      each: this.activitybar,
-		      children: activity => {
-		        return Icon({
-		          url: as.prop(activity.icon)
-		        });
-		      }
-		    }), For({
-		      each: this.activitybar,
-		      children: activity => {
-		        return Icon({
-		          url: as.prop(activity.icon)
-		        });
-		      }
-		    })]
-		  };
+		  return __$htmlStatic\`<s-top-actions>\${For({
+		    each: this.activitybar,
+		    children: activity => {
+		      return Icon({
+		        url: as.prop(activity.icon)
+		      });
+		    }
+		  })}</s-top-actions><s-bottom-actions>\${For({
+		    each: this.activitybar,
+		    children: activity => {
+		      return Icon({
+		        url: as.prop(activity.icon)
+		      });
+		    }
+		  })}</s-bottom-actions>\`;
 		};
 		`));
 	});
@@ -959,7 +884,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const source = `
 		const Button = toTag('custom-button');
 		const props = { variant: 'primary', size: 'large' };
-		const template = <Button {...props}>Submit</Button>;
+		const template = <Button {...props} static>Submit</Button>;
 		`;
 
 		const code = babel.transformSync(source, getOpts())?.code;
@@ -1040,7 +965,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const Element = toTag('custom-element');
 		const template = (
 			<div>
-				<Element>Nested content</Element>
+				<Element static>Nested content</Element>
 			</div>
 		);
 		`;
@@ -1060,7 +985,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const source = `
 		const Element = toTag('custom-element');
 		const template = (
-			<Element>
+			<Element static>
 				<div>Regular content</div>
 			</Element>
 		);
@@ -1083,7 +1008,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const template = (
 			<>
 				<div>Compiled content</div>
-				<Element>Standard content</Element>
+				<Element static>Standard content</Element>
 				<MyComponent>Function component</MyComponent>
 			</>
 		);
@@ -1111,10 +1036,10 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const Button = toTag('ui-button');
 		const template = (
 			<div class="container">
-				<Card title="Card Title">
+				<Card title="Card Title" static>
 					<div class="content">
 						<p>Some text content</p>
-						<Button variant="primary">
+						<Button variant="primary" static>
 							<Icon name="save" />
 							Save
 						</Button>
@@ -1152,7 +1077,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		expect(code).toBe(dedent(`
 			import { __$t } from "@arcmantle/lit-jsx";
 			const _temp = {
-			  "h": __$t\`<div></div>\`,
+			  "h": __$t\`<div> </div>\`,
 			  "parts": []
 			};
 			const template = {
@@ -1172,23 +1097,10 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "@arcmantle/lit-jsx";
-			const _temp = {
-			  "h": __$t\`<div>Hello<?>, you are<?>years old!</div>\`,
-			  "parts": [{
-			    "type": 2,
-			    "index": 1
-			  }, {
-			    "type": 2,
-			    "index": 1
-			  }]
-			};
-			const name = 'John';
-			const age = 30;
-			const template = {
-			  "_$litType$": _temp,
-			  "values": [name, age]
-			};
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		const name = 'John';
+		const age = 30;
+		const template = __$htmlStatic\`<div>Hello \${name}, you are \${age} years old!</div>\`;
 		`));
 	});
 
@@ -1201,23 +1113,13 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "@arcmantle/lit-jsx";
-			const _temp = {
-			  "h": __$t\`<div>Welcome,<?>!</div>\`,
-			  "parts": [{
-			    "type": 2,
-			    "index": 1
-			  }]
-			};
-			const user = {
-			  profile: {
-			    name: 'John'
-			  }
-			};
-			const template = {
-			  "_$litType$": _temp,
-			  "values": [user.profile?.name || 'Guest']
-			};
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		const user = {
+		  profile: {
+		    name: 'John'
+		  }
+		};
+		const template = __$htmlStatic\`<div>Welcome, \${user.profile?.name || 'Guest'}!</div>\`;
 		`));
 	});
 
@@ -1234,21 +1136,8 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { __$t } from "@arcmantle/lit-jsx";
-			const _temp = {
-			  "h": __$t\`<div><span><?></span><span><?></span></div>\`,
-			  "parts": [{
-			    "type": 2,
-			    "index": 2
-			  }, {
-			    "type": 2,
-			    "index": 3
-			  }]
-			};
-			const template = {
-			  "_$litType$": _temp,
-			  "values": [formatDate(new Date()), calculateTotal(items)]
-			};
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		const template = __$htmlStatic\`<div><span>\${formatDate(new Date())}</span><span>\${calculateTotal(items)}</span></div>\`;
 		`));
 	});
 
@@ -1306,7 +1195,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const isSubmitting = false;
 		const template = (
 			<form onSubmit={handleSubmit}>
-				<FormField label="Username" required>
+				<FormField label="Username" required static>
 					<input
 						type="text"
 						value={formData.username}
@@ -1314,7 +1203,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 						disabled={bool => isSubmitting}
 					/>
 				</FormField>
-				<FormField label="Email">
+				<FormField label="Email" static>
 					<input
 						type="email"
 						value={formData.email}
@@ -1327,6 +1216,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 						variant="primary"
 						disabled={bool => isSubmitting}
 						directive={[loading(isSubmitting)]}
+						static
 					>
 						{isSubmitting ? 'Submitting...' : 'Submit'}
 					</Button>
@@ -1368,10 +1258,10 @@ suite('JSX to Lit Transpiler Tests', () => {
 					</thead>
 					<tbody>
 						{users.map(user => (
-							<TableRow key={user.id}>
-								<TableCell>{user.name}</TableCell>
-								<TableCell>{user.age}</TableCell>
-								<TableCell>
+							<TableRow key={user.id} static>
+								<TableCell static>{user.name}</TableCell>
+								<TableCell static>{user.age}</TableCell>
+								<TableCell static>
 									<ActionButton
 										onClick={prop => () => editUser(user.id)}
 										icon="edit"
@@ -1393,32 +1283,22 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const code = babel.transformSync(source, getOpts())?.code;
 
 		expect(code).toBe(dedent(`
-			import { html as __$htmlStatic } from "lit-html/static.js";
-			import { __$t, __$literalMap } from "@arcmantle/lit-jsx";
-			const _temp = {
-			  "h": __$t\`<div class="table-container"><table><thead><tr><th>Name</th><th>Age</th><th>Actions</th></tr></thead><tbody><?></tbody></table></div>\`,
-			  "parts": [{
-			    "type": 2,
-			    "index": 8
-			  }]
-			};
-			const TableRow = toTag('table-row');
-			const __$TableRow = __$literalMap.get(TableRow);
-			const TableCell = toTag('table-cell');
-			const __$TableCell = __$literalMap.get(TableCell);
-			const template = {
-			  "_$litType$": _temp,
-			  "values": [users.map(user => {
-			    return __$htmlStatic\`<\${__$TableRow} key=\${user.id}><\${__$TableCell}>\${user.name}</\${__$TableCell}><\${__$TableCell}>\${user.age}</\${__$TableCell}><\${__$TableCell}>\${ActionButton({
-			      onClick: prop => () => editUser(user.id),
-			      icon: "edit"
-			    })}\${ActionButton({
-			      onClick: prop => () => deleteUser(user.id),
-			      icon: "delete",
-			      variant: "danger"
-			    })}</\${__$TableCell}></\${__$TableRow}>\`;
-			  })]
-			};
+		import { __$literalMap } from "@arcmantle/lit-jsx";
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		const TableRow = toTag('table-row');
+		const __$TableRow = __$literalMap.get(TableRow);
+		const TableCell = toTag('table-cell');
+		const __$TableCell = __$literalMap.get(TableCell);
+		const template = __$htmlStatic\`<div class="table-container"><table><thead><tr><th>Name</th><th>Age</th><th>Actions</th></tr></thead><tbody>\${users.map(user => {
+		  return __$htmlStatic\`<\${__$TableRow} key=\${user.id}><\${__$TableCell}>\${user.name}</\${__$TableCell}><\${__$TableCell}>\${user.age}</\${__$TableCell}><\${__$TableCell}>\${ActionButton({
+		    onClick: prop => () => editUser(user.id),
+		    icon: "edit"
+		  })}\${ActionButton({
+		    onClick: prop => () => deleteUser(user.id),
+		    icon: "delete",
+		    variant: "danger"
+		  })}</\${__$TableCell}></\${__$TableRow}>\`;
+		})}</tbody></table></div>\`;
 		`));
 	});
 
@@ -1434,25 +1314,25 @@ suite('JSX to Lit Transpiler Tests', () => {
 					<UserMenu user={currentUser} />
 				</header>
 				<div class="dashboard-body">
-					<Sidebar position="left">
+					<Sidebar position="left" static>
 						<NavigationMenu items={menuItems} />
 					</Sidebar>
 					<main class="dashboard-content">
-						<Grid cols="2" gap="large">
-							<Card title="Statistics" span="2">
+						<Grid cols="2" gap="large" static>
+							<Card title="Statistics" span="2" static>
 								<StatsChart
 									data={chartData}
 									type="line"
 									directive={[resize()]}
 								/>
 							</Card>
-							<Card title="Recent Activity">
+							<Card title="Recent Activity" static>
 								<ActivityFeed
 									items={activities}
 									maxItems={10}
 								/>
 							</Card>
-							<Card title="Quick Actions">
+							<Card title="Quick Actions" static>
 								<div class="action-grid">
 									{quickActions.map(action => (
 										<ActionCard
@@ -1512,7 +1392,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const Portal = toTag('ui-portal');
 		const Button = toTag('ui-button');
 		const template = (
-			<Portal target="body">
+			<Portal target="body" static>
 				<Modal
 					open={bool => isOpen}
 					onClose={handleClose}
@@ -1521,6 +1401,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 						preventScroll(),
 						clickOutside(handleClose)
 					]}
+					static
 				>
 					<div class="modal-header">
 						<h2>{title}</h2>
@@ -1529,6 +1410,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 							size="small"
 							onClick={handleClose}
 							aria-label="Close"
+							static
 						>
 							<CloseIcon />
 						</Button>
@@ -1548,6 +1430,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 								variant={action.variant || 'secondary'}
 								onClick={action.handler}
 								disabled={bool => action.disabled}
+								static
 							>
 								{action.label}
 							</Button>
@@ -1581,7 +1464,6 @@ suite('JSX to Lit Transpiler Tests', () => {
 	// TODO, try to figure out the case that breaks the current compiled templates.
 	test('correctly sets index of children from two different functions', ({ expect }) => {
 		const source = `
-
 		const subTemplate1 = <>
 		{<span>Header</span>}
 		</>;
@@ -1600,25 +1482,46 @@ suite('JSX to Lit Transpiler Tests', () => {
 
 		const code = babel.transformSync(source, getOpts())?.code;
 
-		console.log(code);
-
-
-		//expect(code).toBe(dedent(`
-		//	import { __$t } from "@arcmantle/lit-jsx";
-		//	const _temp = {
-		//	  "h": __$t\`<div><?></div>\`,
-		//	  "parts": [{
-		//	    "type": 2,
-		//	    "index": 1
-		//	  }, {
-		//	    "type": 2,
-		//	    "index": 2
-		//	  }]
-		//	};
-		//	const template = {
-		//	  "_$litType$": _temp,
-		//	  "values": [this.renderHeader(), this.renderFooter()]
-		//	};
-		//`));
+		expect(code).toBe(dedent(`
+		import { html as __$htmlStatic } from "lit-html/static.js";
+		import { __$t } from "@arcmantle/lit-jsx";
+		const _temp4 = {
+		  "h": __$t\`<span>Footer</span>\`,
+		  "parts": []
+		};
+		const _temp3 = {
+		  "h": __$t\`<?>\`,
+		  "parts": [{
+		    "type": 2,
+		    "index": 0
+		  }]
+		};
+		const _temp2 = {
+		  "h": __$t\`<span>Header</span>\`,
+		  "parts": []
+		};
+		const _temp = {
+		  "h": __$t\`<?>\`,
+		  "parts": [{
+		    "type": 2,
+		    "index": 0
+		  }]
+		};
+		const subTemplate1 = {
+		  "_$litType$": _temp,
+		  "values": [{
+		    "_$litType$": _temp2,
+		    "values": []
+		  }]
+		};
+		const subTemplate2 = {
+		  "_$litType$": _temp3,
+		  "values": [{
+		    "_$litType$": _temp4,
+		    "values": []
+		  }]
+		};
+		const template = __$htmlStatic\`<div>\${subTemplate1}\${subTemplate2}</div>\`;
+		`));
 	});
 });

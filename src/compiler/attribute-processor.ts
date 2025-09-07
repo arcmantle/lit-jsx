@@ -7,6 +7,7 @@ import {
 	ATTR_BIND_OBJ_NAME,
 	ATTR_NAMES,
 	ATTR_VALUES,
+	CE_ATTR_IDENTIFIER,
 	ERROR_MESSAGES,
 	VARIABLES,
 } from './config.js';
@@ -56,6 +57,10 @@ interface ValueBinding {
 
 
 export class AttributeValidators {
+
+	static isCustomElementIdentifier(attr: t.JSXAttribute): attr is t.JSXAttribute {
+		return attr.name.name.toString() === CE_ATTR_IDENTIFIER;
+	}
 
 	static isCallBinding(attr: t.JSXAttribute): attr is CallBindingAttribute {
 		if (!this.isExpression(attr))
@@ -163,6 +168,7 @@ export interface ProcessorContext {
 
 abstract class AttributeProcessor<TContext extends ProcessorContext> {
 
+	abstract customElementIdentifier(attr: t.JSXAttribute, context: TContext): void;
 	abstract callBinding(attr: CallBindingAttribute, context: TContext): void;
 	abstract arrowBinding(attr: ArrowFunctionAttribute, context: TContext): void;
 	abstract directive(attr: JSXAttributeWithExpression, context: TContext): void;
@@ -178,6 +184,8 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 	processAttribute(attr: t.JSXAttribute | t.JSXSpreadAttribute, context: TContext): void {
 		if (AttributeValidators.isSpread(attr))
 			this.spread(attr, context);
+		else if (AttributeValidators.isCustomElementIdentifier(attr))
+			this.customElementIdentifier(attr, context);
 		else if (AttributeValidators.isNonExpression(attr))
 			this.nonExpression(attr, context);
 		else if (AttributeValidators.isBoolean(attr))
@@ -343,6 +351,10 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 
 export class TemplateAttributeProcessor extends AttributeProcessor<TemplateContext> {
 
+	customElementIdentifier(attr: t.JSXAttribute, context: TemplateContext): void {
+		context.builder.addText('');
+	}
+
 	callBinding(attr: CallBindingAttribute, context: TemplateContext): void {
 		this.valueBinding(attr, context);
 	}
@@ -431,6 +443,10 @@ export class TemplateAttributeProcessor extends AttributeProcessor<TemplateConte
 }
 
 export class CompiledAttributeProcessor extends AttributeProcessor<CompiledContext> {
+
+	customElementIdentifier(attr: t.JSXAttribute, context: CompiledContext): void {
+		context.builder.addText('');
+	}
 
 	callBinding(attr: CallBindingAttribute, context: CompiledContext): void {
 		this.valueBinding(attr, context);
@@ -577,3 +593,17 @@ export class CreateCompiledPart {
 	};
 
 }
+
+
+export const hasCustomElementIdentifier = (
+	attributes: (t.JSXAttribute | t.JSXSpreadAttribute)[],
+): boolean => {
+	for (const attr of attributes.values()) {
+		if (AttributeValidators.isSpread(attr))
+			continue;
+		if (AttributeValidators.isCustomElementIdentifier(attr))
+			return true;
+	}
+
+	return false;
+};

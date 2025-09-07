@@ -1,12 +1,18 @@
 import type { BabelFile, PluginPass } from '@babel/core';
 
+
 export type BabelPlugins = NonNullable<NonNullable<babel.TransformOptions['parserOpts']>['plugins']>;
 
 
-export const babelPlugins: Set<BabelPlugins[number]> = new Set([ 'jsx', 'typescript', 'decorators', 'decoratorAutoAccessors' ]);
+export const babelPlugins: Set<BabelPlugins[number]> = new Set([
+	'jsx',
+	'typescript',
+	'decorators',
+	'decoratorAutoAccessors',
+]);
 export const debugMode = { value: false };
 
-
+export const CE_ATTR_IDENTIFIER = 'static';
 export const COMPONENT_LITERAL_PREFIX = '__$';
 export const WHITESPACE_TAGS: string[] = [ 'pre', 'textarea' ];
 export const SPECIAL_TAGS: string[] = [];
@@ -97,26 +103,40 @@ export const ERROR_MESSAGES = {
 } as const;
 
 
+interface PluginOptions {
+	useCompiledTemplates?: boolean;
+	useImportDiscovery?:   boolean;
+}
+
+
 export const initializePluginOptions = (file: BabelFile): { useCompiledTemplates?: boolean; } => {
 	if (optionsInitialized)
 		return options;
 
 	optionsInitialized = true;
 
-	const plugin = file.opts?.plugins
-		?.find(plugin => (plugin as PluginPass).key === 'lit-jsx-transform') as { options?: { useCompiledTemplates?: boolean; }; };
+	const plugin = file.opts?.plugins?.find(plugin =>
+		(plugin as PluginPass).key === 'lit-jsx-transform') as { options?: PluginOptions; };
 
 	const pluginOptions = plugin?.options || {};
+	pluginOptions.useCompiledTemplates ??= true;
 
 	for (const [ key, value ] of Object.entries(pluginOptions))
 		options[key as keyof typeof options] = value as any;
 
 	console.log(`Lit JSX plugin options initialized:`, options);
 
-
 	return pluginOptions;
 };
 
 
+export const getPluginOptions = (file: BabelFile): PluginOptions => {
+	const plugin = file.opts?.plugins?.find(plugin =>
+		(plugin as PluginPass).key === 'lit-jsx-transform') as { options?: PluginOptions; };
+
+	return plugin.options ?? {};
+};
+
+
 let optionsInitialized = false;
-export const options: { useCompiledTemplates?: boolean; } = {};
+export const options: PluginOptions = {};

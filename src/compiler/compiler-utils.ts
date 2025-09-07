@@ -6,9 +6,9 @@ import * as t from '@babel/types';
 
 import { isMathmlTag } from '../shared/mathml-tags.js';
 import { isSvgTag } from '../shared/svg-tags.js';
-import type { ProcessorContext } from './attribute-processor.js';
+import { hasCustomElementIdentifier, type ProcessorContext } from './attribute-processor.js';
 import { traverse } from './babel-traverse.js';
-import { babelPlugins, ERROR_MESSAGES, SOURCES, VARIABLES } from './config.js';
+import { babelPlugins, ERROR_MESSAGES, options, SOURCES, VARIABLES } from './config.js';
 import { isDynamicOrCustomElement } from './import-discovery.js';
 
 
@@ -795,8 +795,13 @@ export const isJSXCustomElementComponent = (
 	if (!isComponent(tagName))
 		return false;
 
-	if (isDynamicOrCustomElement(path.get('openingElement')))
+	if (hasCustomElementIdentifier(node.openingElement.attributes))
 		return true;
+
+	if (options.useImportDiscovery) {
+		if (isDynamicOrCustomElement(path.get('openingElement')))
+			return true;
+	}
 
 	return false;
 };
@@ -815,8 +820,13 @@ export const isJSXFunctionElementComponent = (
 	if (!isComponent(tagName))
 		return false;
 
-	if (isDynamicOrCustomElement(path.get('openingElement')))
+	if (hasCustomElementIdentifier(node.openingElement.attributes))
 		return false;
+
+	if (options.useImportDiscovery) {
+		if (isDynamicOrCustomElement(path.get('openingElement')))
+			return false;
+	}
 
 	return true;
 };
@@ -839,6 +849,16 @@ export const isJSXElementStatic = (path: NodePath<t.JSXElement | t.JSXFragment>)
 		return true;
 
 	for (const childPath of path.get('children')) {
+		// If it has an expression container as a child, with an unknown value inside.
+		// treat it as a static element, as we cannot safely compile it.
+		if (t.isJSXExpressionContainer(childPath.node)) {
+			// Check if the expression value is a JSXElement or JSXFragment
+			if (!t.isJSXElement(childPath.node.expression)
+				&& !t.isJSXFragment(childPath.node.expression))
+				return true;
+		}
+
+		// If it's not a jsx element and not a jsx fragment, continue skip this.
 		if (!isJSXElementPath(childPath) && !isJSXFragmentPath(childPath))
 			continue;
 
@@ -891,4 +911,11 @@ export const getTemplateTag = (
 		return VARIABLES.MATHML;
 
 	return VARIABLES.HTML;
+};
+
+
+export const normalizeText = (text: string): string => {
+	return text
+		.replace(/[\r\n\t]/g, '')
+		.replace(/ {2,}/g, ' ');
 };

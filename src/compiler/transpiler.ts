@@ -16,6 +16,7 @@ import {
 	isJSXElementStatic,
 	isJSXFragmentPath,
 	isValidOpeningElement,
+	normalizeText,
 } from './compiler-utils.js';
 import {
 	Ensure,
@@ -160,10 +161,14 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 	override children(context: TemplateContext): void {
 		for (const [ index, child ] of context.path.node.children.entries()) {
 			if (t.isJSXText(child)) {
-				if (WHITESPACE_TAGS.includes(context.tagName))
+				if (WHITESPACE_TAGS.includes(context.tagName)) {
 					context.builder.addText(child.value);
-				else
-					context.builder.addText(child.value.trim());
+				}
+				else {
+					const normalizedValue = normalizeText(child.value);
+					if (normalizedValue)
+						context.builder.addText(normalizedValue);
+				}
 			}
 			else if (t.isJSXExpressionContainer(child)) {
 				if (t.isJSXEmptyExpression(child.expression))
@@ -300,9 +305,14 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 				const child = childPath.node;
 
 				if (t.isJSXText(child)) {
-					const trimmedValue = child.value.trim();
-					if (trimmedValue)
-						childrenArray.push(t.stringLiteral(trimmedValue));
+					if (WHITESPACE_TAGS.includes(context.tagName)) {
+						childrenArray.push(t.stringLiteral(child.value));
+					}
+					else {
+						const normalizedValue = normalizeText(child.value);
+						if (normalizedValue)
+							childrenArray.push(t.stringLiteral(normalizedValue));
+					}
 				}
 				else if (t.isJSXExpressionContainer(child)) {
 					if (t.isJSXEmptyExpression(child.expression))
@@ -463,10 +473,14 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 			const child = childPath.node;
 
 			if (t.isJSXText(child)) {
-				if (WHITESPACE_TAGS.includes(context.tagName))
+				if (WHITESPACE_TAGS.includes(context.tagName)) {
 					context.builder.addText(child.value);
-				else
-					context.builder.addText(child.value.trim());
+				}
+				else {
+					const normalizedValue = normalizeText(child.value);
+					if (normalizedValue)
+						context.builder.addText(normalizedValue);
+				}
 			}
 			else if (t.isJSXExpressionContainer(child)) {
 				if (t.isJSXEmptyExpression(child.expression))
@@ -560,9 +574,14 @@ export class CompiledTranspiler extends JSXTranspiler<CompiledContext> {
 				const child = childPath.node;
 
 				if (t.isJSXText(child)) {
-					const trimmedValue = child.value.trim();
-					if (trimmedValue)
-						childrenArray.push(t.stringLiteral(trimmedValue));
+					if (WHITESPACE_TAGS.includes(context.tagName)) {
+						childrenArray.push(t.stringLiteral(child.value));
+					}
+					else {
+						const normalizedValue = normalizeText(child.value);
+						if (normalizedValue)
+							childrenArray.push(t.stringLiteral(normalizedValue));
+					}
 				}
 				else if (t.isJSXExpressionContainer(child)) {
 					if (t.isJSXEmptyExpression(child.expression))

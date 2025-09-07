@@ -16,8 +16,10 @@ import { ImportDiscovery } from './import-discovery.js';
 export const litJsx = (options: {
 	/**  Enable legacy decorators support */
 	legacyDecorators?:     boolean;
-	/** Enables experimental support for compiled templates */
+	/** Enables support for experimental compiled templates @default true */
 	useCompiledTemplates?: boolean;
+	/** Opts into the automatic discovery is custom elements instead of using the static attribute */
+	useImportDiscovery?:   boolean;
 	/** Enable debug mode for additional logging */
 	debug?:                boolean;
 	/** Options for the Babel transform */
@@ -65,6 +67,7 @@ export const litJsx = (options: {
 						plugins:        [
 							litJsxBabelPlugin({
 								useCompiledTemplates: options.useCompiledTemplates,
+								useImportDiscovery:   options.useImportDiscovery,
 							}),
 						],
 						ast:        false,

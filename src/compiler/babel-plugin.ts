@@ -9,6 +9,7 @@ import { transformJSXElement } from './transform-jsx.js';
 /** Compiles jsx to a combination of standard and compiled lit-html */
 export const litJsxBabelPlugin = (options: {
 	useCompiledTemplates?: boolean;
+	useImportDiscovery?:   boolean;
 }): [PluginTarget, PluginOptions] => {
 	return [
 		{

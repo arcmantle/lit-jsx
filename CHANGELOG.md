@@ -5,6 +5,12 @@ All notable changes to jsx-lit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project tries to adhere with [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.33] - 2025-09-07
+
+- **Breaking Change**: Import discovery is now opt-in. The new default way to identify a tagged or custom element is by using the static attribute on it
+- Compiled templates are now enabled by default and will skip static compilation when children of an element contain expressions with values that are not statically known to be JSX elements
+- Improved performance and reliability by making template compilation the default behavior while maintaining safety checks for dynamic content
+
 ## [1.0.28] - 2025-07-23
 
 - Compiled templates are now turned off by default as they are still experimental

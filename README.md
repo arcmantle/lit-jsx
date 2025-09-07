@@ -117,6 +117,27 @@ export class MyComponent extends LitElement {
 
 ## 🎯 Core Concepts
 
+### Custom Element Identification
+
+lit-jsx needs to know which elements are custom elements or dynamic tags to compile them correctly. By default, custom elements and dynamic tags must be identified using the `static` attribute:
+
+```tsx
+// ✅ Custom elements - requires static attribute
+<my-custom-element static prop={value}>Content</my-custom-element>
+<MyButton static onClick={handleClick}>Click me</MyButton>
+
+// ✅ Dynamic tags - requires static attribute
+const Tag = toTag('button');
+<Tag static onClick={handleClick}>Dynamic button</Tag>
+
+// ✅ Regular HTML elements - no static attribute needed
+<div className="container">
+  <button onClick={handleClick}>Regular button</button>
+</div>
+```
+
+**Alternative**: Enable automatic import discovery by setting `useImportDiscovery: true` in your Vite config to restore the previous behavior where the compiler automatically detects custom elements.
+
 ### Attribute Binding Control
 
 lit-jsx provides precise control over how values are bound to elements:
@@ -245,8 +266,9 @@ export class MyButton extends LitElement {
 
 const MyButtonComponent = toComponent(MyButton);
 
-// Usage with type safety - compiler automatically detects this as a custom element
+// Usage with type safety - requires static attribute to identify as custom element
 <MyButtonComponent
+  static
   class="custom-btn"
   onClick={() => console.log('Clicked!')}
 />
@@ -286,12 +308,14 @@ const DataListComponent: <T>(props: JSX.JSXProps<DataList<T>>) => string =
 
 // Usage with explicit type parameter
 <DataListComponent<User>
+  static
   items={users}
   renderItem={(user) => `${user.name} (${user.email})`}
 />
 
 // Type inference works for the renderItem callback
 <DataListComponent<Product>
+  static
   items={products}
   renderItem={(product) => `${product.name} - $${product.price}`}
 />
@@ -310,7 +334,7 @@ import { toComponent, ToComponent } from '@arcmantle/lit-jsx';
 function renderWithWrapper(Component: ToComponent) {
   return ({ children, ...props }) => (
     <div class="wrapper">
-      <Component {...props}>{children}</Component>
+      <Component static {...props}>{children}</Component>
     </div>
   );
 }
@@ -319,7 +343,7 @@ function renderWithWrapper(Component: ToComponent) {
 const MyButton = toComponent(MyButtonElement);
 function enhanceButton(ButtonComponent: typeof MyButton) {
   return ({ enhanced, ...props }) => (
-    <ButtonComponent class={enhanced ? 'enhanced' : ''} {...props} />
+    <ButtonComponent static class={enhanced ? 'enhanced' : ''} {...props} />
   );
 }
 
@@ -342,7 +366,7 @@ function ActionElement({ href, children }) {
   const Tag = toTag(href ? 'a' : 'button');
 
   return (
-    <Tag href={href} class="action-element">
+    <Tag static href={href} class="action-element">
       {children}
     </Tag>
   );
@@ -361,7 +385,7 @@ import { toTag, ToTag } from '@arcmantle/lit-jsx';
 // ✅ Using ToTag type annotation
 function createWrapper(TagName: ToTag) {
   return ({ children, ...props }) => (
-    <TagName {...props}>{children}</TagName>
+    <TagName static {...props}>{children}</TagName>
   );
 }
 
@@ -369,7 +393,7 @@ function createWrapper(TagName: ToTag) {
 const ButtonTag = toTag('button');
 function createButton(Element: typeof ButtonTag) {
   return ({ label, ...props }) => (
-    <Element {...props}>{label}</Element>
+    <Element static {...props}>{label}</Element>
   );
 }
 
@@ -482,7 +506,7 @@ import { Choose } from '@arcmantle/lit-jsx';
     (status) => status === 'loading',
     () => (
       <div class="loading">
-        <spinner-icon></spinner-icon>
+        <spinner-icon static></spinner-icon>
         Loading...
       </div>
     )
@@ -517,15 +541,15 @@ import { Choose } from '@arcmantle/lit-jsx';
 <Choose>
   {[
     () => user.isAdmin,
-    () => <admin-panel></admin-panel>
+    () => <admin-panel static></admin-panel>
   ]}
   {[
     () => user.isModerator,
-    () => <moderator-panel></moderator-panel>
+    () => <moderator-panel static></moderator-panel>
   ]}
   {[
     () => true, // Default case
-    () => <user-panel></user-panel>
+    () => <user-panel static></user-panel>
   ]}
 </Choose>
 ```
@@ -722,16 +746,53 @@ export class TodoList extends LitElement {
 ### Vite Plugin Options
 
 ```typescript
-import { litJsx } from '@arcmantle/lit-jsx/vite-jsx-preserve';
+import { litJsx } from '@arcmantle/lit-jsx/vite';
 
 export default defineConfig({
   plugins: [
     litJsx({
       legacyDecorators: true,
+      useCompiledTemplates: true, // Default: true - enables compiled templates for better performance
+      useImportDiscovery: false,  // Default: false - when false, requires 'static' attribute for custom elements
     }),
   ],
 });
 ```
+
+### Breaking Changes in v1.0.33
+
+#### Import Discovery Now Opt-In
+
+Starting in v1.0.33, import discovery is disabled by default. This means:
+
+- **New default behavior**: Custom elements and dynamic tags must be identified using the `static` attribute
+- **Previous behavior**: Can be restored by setting `useImportDiscovery: true` in the plugin options
+
+**Why this change?** The static attribute approach provides better performance, more predictable compilation, and clearer intent in your JSX code.
+
+#### Using the Static Attribute
+
+The `static` attribute tells the compiler that an element is a custom element or dynamic tag:
+
+```tsx
+// ✅ New default way - using static attribute
+<MyButton static>Click me</MyButton>
+<MyCustomElement static prop={value}>Content</MyCustomElement>
+
+// ✅ For dynamic tags with toTag()
+const Tag = toTag(href ? 'a' : 'button');
+<Tag static href={href}>Dynamic element</Tag>
+
+// ❌ Old way - no longer works by default
+<MyButton>Click me</MyButton> // Treated as regular HTML element
+
+// ✅ To restore old behavior, enable import discovery
+// vite.config.ts: litJsx({ useImportDiscovery: true })
+```
+
+#### Compiled Templates Default
+
+Compiled templates are now enabled by default (`useCompiledTemplates: true`) for better performance. The compiler intelligently skips static compilation when children contain dynamic expressions that aren't statically known to be JSX elements.
 
 ## 🚀 Template Types
 
@@ -801,6 +862,43 @@ lit-jsx is designed to work seamlessly with the entire Lit ecosystem:
 - **TypeScript**: Comprehensive type definitions for the best developer experience
 
 ## 📚 Migration Guide
+
+### From v1.0.32 to v1.0.33
+
+#### Breaking Change: Import Discovery → Static Attribute
+
+**Old way (v1.0.28 and earlier):**
+
+```tsx
+import { toComponent } from '@arcmantle/lit-jsx';
+
+const MyButton = toComponent(MyButtonElement);
+
+// Worked automatically - no static attribute needed
+<MyButton on-click={handleClick}>Click me</MyButton>
+<my-custom-element prop={value}>Content</my-custom-element>
+```
+
+**New way (v1.0.33+):**
+
+```tsx
+import { toComponent } from '@arcmantle/lit-jsx';
+
+const MyButton = toComponent(MyButtonElement);
+
+// Requires static attribute to identify as custom element
+<MyButton static on-click={handleClick}>Click me</MyButton>
+<my-custom-element static prop={value}>Content</my-custom-element>
+
+// Or restore old behavior in vite.config.ts
+litJsx({ useImportDiscovery: true })
+```
+
+#### Migration Steps
+
+1. **Add `static` attribute** to all custom elements and dynamic tags in your JSX
+2. **Or enable import discovery** by setting `useImportDiscovery: true` in your Vite config
+3. **Compiled templates** are now enabled by default - no action needed
 
 ### From React JSX
 
