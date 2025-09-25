@@ -28,23 +28,23 @@
 		"test": "pnpm vitest run"
 	},
 	"dependencies": {
-		"@babel/core": "^7.20.12",
-		"@babel/plugin-syntax-jsx": "^7.18.6",
-		"@babel/traverse": "^7.27.4",
-		"@babel/types": "^7.27.6",
-		"@types/babel__core": "^7.20.5",
-		"@types/babel__traverse": "^7.20.7",
-		"csstype": "^3.1.3",
-		"deepmerge-ts": "^7.1.5",
-		"lit-html": "^3.3.0",
-		"oxc-resolver": "^11.5.0",
-		"validate-html-nesting": "^1.2.1"
+		"@babel/core": "catalog:",
+		"@babel/plugin-syntax-jsx": "catalog:",
+		"@babel/traverse": "catalog:",
+		"@babel/types": "catalog:",
+		"@types/babel__core": "catalog:",
+		"@types/babel__traverse": "catalog:",
+		"csstype": "catalog:",
+		"deepmerge-ts": "catalog:",
+		"lit-html": "catalog:",
+		"oxc-resolver": "catalog:",
+		"validate-html-nesting": "catalog:"
 	},
 	"devDependencies": {
-		"oxc-parser": "^0.77.0",
-		"oxc-walker": "^0.3.0",
-		"typescript": "^5.8.3",
-		"vite": "^7.0.0",
-		"vitest": "^3.2.4"
+		"oxc-parser": "catalog:",
+		"oxc-walker": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"vitest": "catalog:"
 	}
 }
