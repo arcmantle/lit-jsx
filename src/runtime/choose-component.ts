@@ -4,7 +4,7 @@ import { nothing } from 'lit-html';
 type ChooseValue<T> = T extends undefined ? never : T;
 type ChooseChild<T> = [
 	condition: (value: ChooseValue<T>) => boolean,
-	output: (value: ChooseValue<T>) => JSX.JSXElement,
+	output: (value: ChooseValue<T>) => LitJSX.Child,
 ];
 
 
@@ -39,7 +39,7 @@ type ChooseChild<T> = [
 export function Choose<T = undefined>(props: {
 	value?:   T;
 	children: ChooseChild<T> | ChooseChild<T>[];
-}): JSX.JSXElement {
+}): LitJSX.Child {
 	const children = Array.isArray(props.children.at(-1))
 		? props.children as ChooseChild<T>[]
 		: [ props.children as ChooseChild<T> ];

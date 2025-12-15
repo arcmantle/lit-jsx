@@ -1,0 +1,12 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"jsx": "preserve",
+		"jsxImportSource": "@arcmantle/lit-jsx",
+		"rootDir": ".."
+	},
+	"include": [
+		"./**/*.ts",
+		"./**/*.tsx"
+	]
+}

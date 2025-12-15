@@ -26,12 +26,12 @@ import { when } from 'lit-html/directives/when.js';
 export function Show<C>(props: {
 	when:     C;
 	children:
-		| ((value: NoInfer<C>) => JSX.JSXElement)
+		| ((value: NoInfer<C>) => LitJSX.Child)
 		| [
-			true: ((value: NoInfer<C>) => JSX.JSXElement),
-			false: ((value: NoInfer<C>) => JSX.JSXElement),
+			true: ((value: NoInfer<C>) => LitJSX.Child),
+			false: ((value: NoInfer<C>) => LitJSX.Child),
 		];
-}): JSX.JSXElement {
+}): LitJSX.Child {
 	if (Array.isArray(props.children))
 		return when(props.when, props.children[0], props.children[1]);
 

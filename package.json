@@ -12,8 +12,8 @@
 	"type": "module",
 	"exports": {
 		".": "./dist/utils.js",
-		"./jsx-runtime": "./dist/shared/jsx-types.d.ts",
-		"./jsx-dev-runtime": "./dist/shared/jsx-types.d.ts",
+		"./jsx-runtime": "./src/shared/jsx-types.ts",
+		"./jsx-dev-runtime": "./src/shared/jsx-types.ts",
 		"./vite": "./dist/compiler/vite-plugin.js"
 	},
 	"main": "./dist/react-jsx/jsx-runtime.js",

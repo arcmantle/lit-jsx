@@ -21,12 +21,12 @@ import { repeat } from 'lit-html/directives/repeat.js';
  * </For>
  * ```
  */
-export function For<T, U extends JSX.JSXElement>(props: {
+export function For<T, U extends LitJSX.Child>(props: {
 	each:       readonly T[];
 	key?:       (item: T, index: number) => any;
-	separator?: JSX.JSXElement;
+	separator?: LitJSX.Child;
 	children:   (item: T, index: number) => U;
-}): JSX.JSXElement {
+}): LitJSX.Child {
 	if (props.key) {
 		return repeat(
 			props.each,

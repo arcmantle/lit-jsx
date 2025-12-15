@@ -153,8 +153,6 @@ lit-jsx provides precise control over how values are bound to elements:
 
 ```tsx
 <input value={as.prop(userInput)} />
-// or
-<input value={prop => userInput} />
 // Compiles to: <input .value=${userInput} />
 ```
 
@@ -162,8 +160,6 @@ lit-jsx provides precise control over how values are bound to elements:
 
 ```tsx
 <input disabled={as.bool(isDisabled)} />
-// or
-<input disabled={bool => isDisabled} />
 // Compiles to: <input ?disabled=${isDisabled} />
 ```
 
@@ -817,24 +813,24 @@ lit-jsx automatically detects and uses the appropriate template type:
 <div data-id={item.id} aria-label={item.description} />
 ```
 
-#### **Property Binding (`as.prop()` or `prop =>`)**
+#### **Property Binding (`as.prop()`)**
 
 - Standard DOM properties like `value`, `checked`, `selected`
 - Interactive elements that need live property updates
 - Complex object values
 
 ```tsx
-<input value={as.prop(formData.email)} checked={prop => isSelected} />
+<input value={as.prop(formData.email)} checked={as.prop(isSelected)} />
 ```
 
-#### **Boolean Attribute Binding (`as.bool()` or `bool =>`)**
+#### **Boolean Attribute Binding (`as.bool()`)**
 
 - Boolean HTML attributes like `disabled`, `hidden`, `readonly`
 - Accessibility attributes that follow boolean patterns
 - Presence/absence semantics
 
 ```tsx
-<button disabled={as.bool(isLoading)} hidden={bool => !isVisible} />
+<button disabled={as.bool(isLoading)} hidden={as.bool(!isVisible)} />
 ```
 
 ### Function Component Guidelines

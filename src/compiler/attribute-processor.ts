@@ -2,7 +2,7 @@ import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 import { PartType } from 'lit-html/directive.js';
 
-import type { EnsureImport, Values } from './compiler-utils.js';
+import type { EnsureImport } from './compiler-utils.js';
 import {
 	ATTR_BIND_OBJ_NAME,
 	ATTR_NAMES,
@@ -26,15 +26,6 @@ interface CallBindingAttribute extends t.JSXAttribute {
 	};
 }
 
-interface ArrowFunctionAttribute extends t.JSXAttribute {
-	value: t.JSXExpressionContainer & {
-		expression: t.ArrowFunctionExpression & {
-			params: [ t.Identifier & { name: Values<typeof ATTR_VALUES>; } ];
-			body:   t.Expression;
-		};
-	};
-}
-
 interface JSXAttributeWithExpression extends t.JSXAttribute {
 	value: t.JSXExpressionContainer & {
 		expression: t.Expression;
@@ -54,7 +45,6 @@ interface ValueBinding {
 	name:       string;
 	expression: t.Expression;
 }
-
 
 export class AttributeValidators {
 
@@ -85,36 +75,6 @@ export class AttributeValidators {
 		return true;
 	}
 
-	static isArrowBinding(attr: t.JSXAttribute): attr is ArrowFunctionAttribute {
-		if (!this.isExpression(attr))
-			return false;
-
-		const expression = attr.value.expression;
-
-		if (!t.isArrowFunctionExpression(expression))
-			return false;
-
-		// If the arrow function has no parameters, we can skip it.
-		if (expression.params.length === 0)
-			return false;
-
-		// If the arrow function has more than one parameter, we can skip it.
-		if (expression.params.length > 1)
-			return false;
-
-		// If the param is not an identifier, we can skip it.
-		const param = expression.params[0];
-		if (!t.isIdentifier(param))
-			return false;
-
-		// If the body of the arrow function is not an expression, we can skip it.
-		if (!t.isExpression(expression.body))
-			return false;
-
-		// We check if it is a valid bind parameter.
-		return param.name === ATTR_VALUES.PROP
-		|| param.name === ATTR_VALUES.BOOL;
-	}
 
 	static isDirective(attr: t.JSXAttribute): attr is JSXAttributeWithExpression {
 		return this.isExpression(attr) && attr.name.name.toString() === ATTR_NAMES.DIRECTIVE;
@@ -170,7 +130,6 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 
 	abstract customElementIdentifier(attr: t.JSXAttribute, context: TContext): void;
 	abstract callBinding(attr: CallBindingAttribute, context: TContext): void;
-	abstract arrowBinding(attr: ArrowFunctionAttribute, context: TContext): void;
 	abstract directive(attr: JSXAttributeWithExpression, context: TContext): void;
 	abstract ref(attr: JSXAttributeWithExpression, context: TContext): void;
 	abstract classList(attr: JSXAttributeWithExpression, context: TContext): void;
@@ -195,8 +154,6 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 		// Order is based on a guess as to which expression is more common.
 		else if (AttributeValidators.isEvent(attr))
 			this.event(attr, context);
-		else if (AttributeValidators.isArrowBinding(attr))
-			this.arrowBinding(attr, context);
 		else if (AttributeValidators.isCallBinding(attr))
 			this.callBinding(attr, context);
 		else if (AttributeValidators.isClassListBinding(attr))
@@ -218,7 +175,7 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 	}
 
 	protected createValueBinding(
-		attr: CallBindingAttribute | ArrowFunctionAttribute,
+		attr: CallBindingAttribute,
 		context: TContext,
 	): ValueBinding {
 		const expression = attr.value.expression;
@@ -231,12 +188,6 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 			isProp = expression.callee.property.name === ATTR_VALUES.PROP;
 			isBool = expression.callee.property.name === ATTR_VALUES.BOOL;
 			expressionBody = expression.arguments[0];
-		}
-		else if (t.isArrowFunctionExpression(expression)) {
-			const param = expression.params[0];
-			isProp = param.name === ATTR_VALUES.PROP;
-			isBool = param.name === ATTR_VALUES.BOOL;
-			expressionBody = expression.body;
 		}
 		else {
 			throw new Error(ERROR_MESSAGES.INVALID_DIRECTIVE_VALUE);
@@ -359,10 +310,6 @@ export class TemplateAttributeProcessor extends AttributeProcessor<TemplateConte
 		this.valueBinding(attr, context);
 	}
 
-	arrowBinding(attr: ArrowFunctionAttribute, context: TemplateContext): void {
-		this.valueBinding(attr, context);
-	}
-
 	directive(attr: JSXAttributeWithExpression, context: TemplateContext): void {
 		for (const expression of this.createDirective(attr, context)) {
 			context.builder.addText(' ');
@@ -426,7 +373,7 @@ export class TemplateAttributeProcessor extends AttributeProcessor<TemplateConte
 	};
 
 	protected valueBinding(
-		attr: CallBindingAttribute | ArrowFunctionAttribute,
+		attr: CallBindingAttribute,
 		context: TemplateContext,
 	): void {
 		const { type, name, expression } = this.createValueBinding(attr, context);
@@ -449,10 +396,6 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 	}
 
 	callBinding(attr: CallBindingAttribute, context: CompiledContext): void {
-		this.valueBinding(attr, context);
-	}
-
-	arrowBinding(attr: ArrowFunctionAttribute, context: CompiledContext): void {
 		this.valueBinding(attr, context);
 	}
 
@@ -523,7 +466,7 @@ export class CompiledAttributeProcessor extends AttributeProcessor<CompiledConte
 	};
 
 	protected valueBinding(
-		attr: CallBindingAttribute | ArrowFunctionAttribute,
+		attr: CallBindingAttribute,
 		context: CompiledContext,
 	): void {
 		const { type, name, expression } = this.createValueBinding(attr, context);
