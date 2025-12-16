@@ -76,3 +76,44 @@ export const preprocess: VisitNodeFunction<PluginPass, t.Program> = (path): void
 	path.traverse(ensureValidJSXNesting);
 	path.traverse(ensureValidFunctionsReturningJSX);
 };
+
+
+/**
+ * Strips all compiler-only helper calls like `as.prop(x)`, `as.bool(x)`, and `as.tag(x)`.
+ *
+ * These helpers are declared as type-only globals and must never survive into emitted JS.
+ * This runs AFTER JSX transformation, so the JSX transformer has already used as.prop() and
+ * as.bool() to determine the correct part types (BooleanPart, PropertyPart, etc).
+ */
+const stripCompilerOnlyAsHelpers: TraverseOptions = {
+	CallExpression(path) {
+		const { node } = path;
+
+		if (!t.isMemberExpression(node.callee))
+			return;
+
+		if (!t.isIdentifier(node.callee.object) || node.callee.object.name !== 'as')
+			return;
+
+		if (!t.isIdentifier(node.callee.property))
+			return;
+
+		const name = node.callee.property.name;
+		if (name !== 'prop' && name !== 'bool' && name !== 'tag')
+			return;
+
+		if (node.arguments.length !== 1)
+			return;
+
+		const arg = node.arguments[0];
+		if (!t.isExpression(arg))
+			return;
+
+		// Strip all as.* helper calls after JSX transformation
+		path.replaceWith(arg);
+	},
+};
+
+export const postprocess: VisitNodeFunction<PluginPass, t.Program> = (path): void => {
+	path.traverse(stripCompilerOnlyAsHelpers);
+};

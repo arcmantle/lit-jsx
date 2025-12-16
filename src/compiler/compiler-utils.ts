@@ -420,327 +420,132 @@ export class Ensure {
 }
 
 
+interface ImportConfig {
+	source: string;
+	name:   string;
+	local:  string;
+}
+
+const IMPORT_CONFIGS = {
+	html:          { source: SOURCES.HTML,          name: VARIABLES.HTML,            local: VARIABLES.HTML_LOCAL          },
+	htmlStatic:    { source: SOURCES.HTML_STATIC,   name: VARIABLES.HTML_STATIC,     local: VARIABLES.HTML_STATIC_LOCAL   },
+	svg:           { source: SOURCES.SVG,           name: VARIABLES.SVG,             local: VARIABLES.SVG_LOCAL           },
+	svgStatic:     { source: SOURCES.SVG_STATIC,    name: VARIABLES.SVG_STATIC,      local: VARIABLES.SVG_STATIC_LOCAL    },
+	mathml:        { source: SOURCES.MATHML,        name: VARIABLES.MATHML,          local: VARIABLES.MATHML_LOCAL        },
+	mathmlStatic:  { source: SOURCES.MATHML_STATIC, name: VARIABLES.MATHML_STATIC,   local: VARIABLES.MATHML_STATIC_LOCAL },
+	unsafeStatic:  { source: SOURCES.UNSAFE_STATIC, name: VARIABLES.UNSAFE_STATIC,   local: VARIABLES.UNSAFE_STATIC_LOCAL },
+	createRef:     { source: SOURCES.REF,           name: VARIABLES.REF,             local: VARIABLES.REF_LOCAL           },
+	styleMap:      { source: SOURCES.STYLE_MAP,     name: VARIABLES.STYLE_MAP,       local: VARIABLES.STYLE_MAP_LOCAL     },
+	classMap:      { source: SOURCES.CLASS_MAP,     name: VARIABLES.CLASS_MAP,       local: VARIABLES.CLASS_MAP_LOCAL     },
+	rest:          { source: SOURCES.REST,          name: VARIABLES.REST,            local: VARIABLES.REST                },
+	literalMap:    { source: SOURCES.LITERAL_MAP,   name: VARIABLES.LITERAL_MAP,     local: VARIABLES.LITERAL_MAP         },
+	booleanPart:   { source: SOURCES.JSX_LIT,       name: VARIABLES.BOOLEAN_PART,    local: VARIABLES.BOOLEAN_PART        },
+	attributePart: { source: SOURCES.JSX_LIT,       name: VARIABLES.ATTRIBUTE_PART,  local: VARIABLES.ATTRIBUTE_PART      },
+	propertyPart:  { source: SOURCES.JSX_LIT,       name: VARIABLES.PROPERTY_PART,   local: VARIABLES.PROPERTY_PART       },
+	elementPart:   { source: SOURCES.JSX_LIT,       name: VARIABLES.ELEMENT_PART,    local: VARIABLES.ELEMENT_PART        },
+	eventPart:     { source: SOURCES.JSX_LIT,       name: VARIABLES.EVENT_PART,      local: VARIABLES.EVENT_PART          },
+	childPart:     { source: SOURCES.JSX_LIT,       name: VARIABLES.CHILD_PART,      local: VARIABLES.CHILD_PART          },
+	tTemplateUtil: { source: SOURCES.JSX_LIT,       name: VARIABLES.T_TEMPLATE_UTIL, local: VARIABLES.T_TEMPLATE_UTIL     },
+} as const;
+
 export class EnsureImport {
 
-	static html(program: t.Program, path: NodePath): void {
+	protected static ensureImport(
+		config: ImportConfig,
+		program: t.Program,
+		path: NodePath,
+	): void {
 		Ensure.import(
-			(source) => source === SOURCES.HTML || source === SOURCES.HTML_ALT,
-			(name) => name === VARIABLES.HTML,
+			(source) => source === config.source,
+			(name) => name === config.name,
 			() => t.importDeclaration(
 				[
 					t.importSpecifier(
-						t.identifier(VARIABLES.HTML_LOCAL),
-						t.identifier(VARIABLES.HTML),
+						t.identifier(config.local),
+						t.identifier(config.name),
 					),
 				],
-				t.stringLiteral(SOURCES.HTML),
+				t.stringLiteral(config.source),
 			),
 			program,
 			path,
 		);
+	}
+
+	static html(program: t.Program, path: NodePath): void {
+		this.ensureImport(IMPORT_CONFIGS.html, program, path);
 	}
 
 	static htmlStatic(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.HTML_STATIC || source === SOURCES.HTML_STATIC_ALT,
-			(name) => name === VARIABLES.HTML,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.HTML_STATIC_LOCAL),
-						t.identifier(VARIABLES.HTML_STATIC),
-					),
-				],
-				t.stringLiteral(SOURCES.HTML_STATIC),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.htmlStatic, program, path);
 	}
 
 	static svg(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.SVG || source === SOURCES.SVG_ALT,
-			(name) => name === VARIABLES.SVG,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.SVG_LOCAL),
-						t.identifier(VARIABLES.SVG),
-					),
-				],
-				t.stringLiteral(SOURCES.SVG),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.svg, program, path);
 	}
 
 	static svgStatic(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.SVG_STATIC || source === SOURCES.SVG_STATIC_ALT,
-			(name) => name === VARIABLES.SVG,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.SVG_STATIC_LOCAL),
-						t.identifier(VARIABLES.SVG_STATIC),
-					),
-				],
-				t.stringLiteral(SOURCES.SVG_STATIC),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.svgStatic, program, path);
 	}
 
 	static mathml(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.MATHML || source === SOURCES.MATHML_ALT,
-			(name) => name === VARIABLES.MATHML,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.MATHML_LOCAL),
-						t.identifier(VARIABLES.MATHML),
-					),
-				],
-				t.stringLiteral(SOURCES.MATHML),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.mathml, program, path);
 	}
 
 	static mathmlStatic(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.MATHML_STATIC || source === SOURCES.MATHML_STATIC_ALT,
-			(name) => name === VARIABLES.MATHML,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.MATHML_STATIC_LOCAL),
-						t.identifier(VARIABLES.MATHML_STATIC),
-					),
-				],
-				t.stringLiteral(SOURCES.MATHML_STATIC),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.mathmlStatic, program, path);
 	}
 
 	static unsafeStatic(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.UNSAFE_STATIC || source === SOURCES.UNSAFE_STATIC_ALT,
-			(name) => name === VARIABLES.UNSAFE_STATIC,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.UNSAFE_STATIC_LOCAL),
-						t.identifier(VARIABLES.UNSAFE_STATIC),
-					),
-				],
-				t.stringLiteral(SOURCES.UNSAFE_STATIC),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.unsafeStatic, program, path);
 	}
 
 	static createRef(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.REF_ALT || source === SOURCES.REF,
-			(name) => name === VARIABLES.REF,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.REF_LOCAL),
-						t.identifier(VARIABLES.REF),
-					),
-				],
-				t.stringLiteral(SOURCES.REF),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.createRef, program, path);
 	}
 
 	static styleMap(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.STYLE_MAP_ALT || source === SOURCES.STYLE_MAP,
-			(name) => name === VARIABLES.STYLE_MAP,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.STYLE_MAP_LOCAL),
-						t.identifier(VARIABLES.STYLE_MAP),
-					),
-				],
-				t.stringLiteral(SOURCES.STYLE_MAP),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.styleMap, program, path);
 	}
 
 	static classMap(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.CLASS_MAP_ALT || source === SOURCES.CLASS_MAP,
-			(name) => name === VARIABLES.CLASS_MAP,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.CLASS_MAP_LOCAL),
-						t.identifier(VARIABLES.CLASS_MAP),
-					),
-				],
-				t.stringLiteral(SOURCES.CLASS_MAP),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.classMap, program, path);
 	}
 
 	static rest(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.REST,
-			(name) => name === VARIABLES.REST,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.REST),
-						t.identifier(VARIABLES.REST),
-					),
-				],
-				t.stringLiteral(SOURCES.REST),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.rest, program, path);
 	}
 
 	static literalMap(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.LITERAL_MAP,
-			(name) => name === VARIABLES.LITERAL_MAP,
-			() => t.importDeclaration(
-				[
-					t.importSpecifier(
-						t.identifier(VARIABLES.LITERAL_MAP),
-						t.identifier(VARIABLES.LITERAL_MAP),
-					),
-				],
-				t.stringLiteral(SOURCES.LITERAL_MAP),
-			),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.literalMap, program, path);
 	}
 
 	static taggedTemplateUtil(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.JSX_LIT,
-			(name) => name === VARIABLES.TAGGED_TEMPLATE_UTIL,
-			() => t.importDeclaration([
-				t.importSpecifier(
-					t.identifier(VARIABLES.TAGGED_TEMPLATE_UTIL),
-					t.identifier(VARIABLES.TAGGED_TEMPLATE_UTIL),
-				),
-			], t.stringLiteral(SOURCES.JSX_LIT)),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.tTemplateUtil, program, path);
 	}
 
 	static booleanPart(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.JSX_LIT,
-			(name) => name === VARIABLES.BOOLEAN_PART,
-			() => t.importDeclaration([
-				t.importSpecifier(
-					t.identifier(VARIABLES.BOOLEAN_PART),
-					t.identifier(VARIABLES.BOOLEAN_PART),
-				),
-			], t.stringLiteral(SOURCES.JSX_LIT)),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.booleanPart, program, path);
 	}
 
 	static attributePart(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.JSX_LIT,
-			(name) => name === VARIABLES.ATTRIBUTE_PART,
-			() => t.importDeclaration([
-				t.importSpecifier(
-					t.identifier(VARIABLES.ATTRIBUTE_PART),
-					t.identifier(VARIABLES.ATTRIBUTE_PART),
-				),
-			], t.stringLiteral(SOURCES.JSX_LIT)),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.attributePart, program, path);
 	}
 
 	static propertyPart(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.JSX_LIT,
-			(name) => name === VARIABLES.PROPERTY_PART,
-			() => t.importDeclaration([
-				t.importSpecifier(
-					t.identifier(VARIABLES.PROPERTY_PART),
-					t.identifier(VARIABLES.PROPERTY_PART),
-				),
-			], t.stringLiteral(SOURCES.JSX_LIT)),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.propertyPart, program, path);
 	}
 
 	static elementPart(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.JSX_LIT,
-			(name) => name === VARIABLES.ELEMENT_PART,
-			() => t.importDeclaration([
-				t.importSpecifier(
-					t.identifier(VARIABLES.ELEMENT_PART),
-					t.identifier(VARIABLES.ELEMENT_PART),
-				),
-			], t.stringLiteral(SOURCES.JSX_LIT)),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.elementPart, program, path);
 	}
 
 	static eventPart(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.JSX_LIT,
-			(name) => name === VARIABLES.EVENT_PART,
-			() => t.importDeclaration([
-				t.importSpecifier(
-					t.identifier(VARIABLES.EVENT_PART),
-					t.identifier(VARIABLES.EVENT_PART),
-				),
-			], t.stringLiteral(SOURCES.JSX_LIT)),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.eventPart, program, path);
 	}
 
 	static childPart(program: t.Program, path: NodePath): void {
-		Ensure.import(
-			(source) => source === SOURCES.JSX_LIT,
-			(name) => name === VARIABLES.CHILD_PART,
-			() => t.importDeclaration([
-				t.importSpecifier(
-					t.identifier(VARIABLES.CHILD_PART),
-					t.identifier(VARIABLES.CHILD_PART),
-				),
-			], t.stringLiteral(SOURCES.JSX_LIT)),
-			program,
-			path,
-		);
+		this.ensureImport(IMPORT_CONFIGS.childPart, program, path);
 	}
 
 }

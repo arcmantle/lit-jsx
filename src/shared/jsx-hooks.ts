@@ -1,11 +1,8 @@
 export {};
 
+
 /**
  * TSX hook declarations for lit-jsx.
- *
- * This file contains ONLY the TypeScript-recognized `JSX.*` hook names used for
- * TSX type-checking. Keeping them isolated makes it easy to see and evolve the
- * TSX contract without getting lost in the large DOM attribute surface.
  */
 
 declare global {
@@ -25,8 +22,8 @@ declare global {
 		 * Note: this intentionally references tag/component helper types declared in
 		 * `jsx-core.ts`.
 		 */
-		type ElementType =
-			| LitJSX.IntrinsicTagName
+		type ElementType
+			= keyof LitJSX.IntrinsicElements
 			| (string & {})
 			| LitJSX.ComponentLike<any>;
 
@@ -37,18 +34,14 @@ declare global {
 		 * - require `static: true` for class-based component tags
 		 * - preserve TSX generic arguments on class instances (avoid `unknown` props)
 		 */
-		type LibraryManagedAttributes<C, P> =
-			C extends abstract new (...args: any[]) => infer I
-				? (
-					P extends I
-						? LitJSX.JSXProps<Extract<P, object>> & LitJSX.StaticMarker
-						: LitJSX.ComponentProps<C> & LitJSX.StaticMarker
-				)
-				: (
-					C extends LitJSX.IntrinsicTagName
-						? LitJSX.IntrinsicElementProps<C>
-						: LitJSX.ComponentProps<C>
-				);
+		type LibraryManagedAttributes<C, P>
+			= C extends abstract new (...args: any[]) => infer I
+				? (P extends I
+					? LitJSX.JSXProps<Extract<P, object>> & LitJSX.StaticMarker
+					: LitJSX.ComponentProps<C> & LitJSX.StaticMarker)
+				: (C extends keyof LitJSX.IntrinsicElements
+					? LitJSX.IntrinsicElementProps<C>
+					: LitJSX.ComponentProps<C>);
 
 		/**
 		 * TSX hook: controls the instance type used for class components.

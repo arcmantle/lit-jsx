@@ -1,187 +1,99 @@
-import type { nothing, TemplateResult } from 'lit-html';
+import type { TemplateResult } from 'lit-html';
 import type { DirectiveResult } from 'lit-html/async-directive.js';
-
-
-/**
- * Core (non-DOM) JSX typing surface for lit-jsx.
- *
- * - `jsx-core.ts` owns: component/class support, `static` marker, dynamic tag typing
- *   (`as.tag`), and shared helper types used by DOM typings.
- * - `jsx-dom.ts` owns: DOM attributes and events.
- * - `jsx-hooks.ts` owns: TSX hook names (`JSX.Element`, `JSX.ElementType`, ...).
- */
+import type { RefOrCallback } from 'lit-html/directives/ref.js';
 
 
 declare global {
 	namespace LitJSX {
-		//#region Shared primitives (used by jsx-dom.ts)
+		type HTMLElementAssignableProps<T extends object & Record<string, any>> =
+			Partial<TrimReadonly<T>>;
 
-		type DOMElement = Element;
+		type HTMLElementProps = HTMLElementAssignableProps<HTMLElement>;
+
+		type JSXElementProps<T extends object> = HTMLElementAssignableProps<T> & {
+			children?:  LitJSX.Child;
+			ref?:       RefOrCallback<HTMLElementAssignableProps<T>>;
+			classList?: { [k: string]: boolean | undefined; };
+			styleList?: CSSProperties;
+
+			/**
+			 * This property takes in one or more element directives.
+			 * This is akin to applying a directive through `<div ${myDirective()}></div>`.
+			 */
+			directive?: DirectiveResult<any> | DirectiveResult<any>[];
+		} & {
+			[key: `data-${ string }`]: string | undefined;
+		};
+
+		type ElementMapToJSXElements<T extends object & Record<string, any>> = {
+			[K in keyof T]: JSXElementProps<T[K]>;
+		};
 
 		type IfEquals<X, Y, A = X> =
-		(<T>() => T extends X ? 1 : 2) extends
-		(<T>() => T extends Y ? 1 : 2) ? A : never;
+			(<T>() => T extends X ? 1 : 2) extends
+			(<T>() => T extends Y ? 1 : 2) ? A : never;
+
 		type WritableKeys<T> = {
-			[P in keyof T]-?: IfEquals<{ [Q in P]: T[P] }, { -readonly [Q in P]: T[P] }, P>
+			[P in keyof T]-?: IfEquals<
+				{ [Q in P]: T[P] },
+				{ -readonly [Q in P]: T[P] },
+				P
+			>
 		}[keyof T];
+
 		type TrimReadonly<T> = Pick<T, WritableKeys<T>>;
-		type ExcludeHTML<T extends object> = TrimReadonly<Omit<T, keyof HTMLElement | 'constructor'>>;
 
-		type Child = [
-			Generator,
-			DirectiveResult<any>,
-			typeof nothing,
-			TemplateResult<any>,
-			Node,
-			Child[],
-			(string & {}),
-			number,
-			boolean,
-			null,
-			undefined,
-			unknown,
-		][number];
-		//#endregion
+		type TrimHTMLElement<T extends object> = TrimReadonly<Omit<T, keyof HTMLElement | 'constructor'>>;
 
-		// NOTE: TSX hook names (like `JSX.Element`) are declared in `jsx-hooks.ts`.
+		type JSXProps<T extends object> =
+			& TrimHTMLElement<T>
+			& Omit<HTMLElementProps, keyof TrimHTMLElement<T>>;
 
-		//#region Component model (functions, classes, dynamic tags)
+		type Child = unknown;
 
 		type Element = TemplateResult<any>;
 
-		/**
-		 * A "functional component" in this ecosystem.
-		 * Your transpiler can rewrite calls however it wants; this is just for TS type-checking.
-		 */
-		type Component<P extends object = {}> = (props: P) => Element;
-		//#endregion
-
-		/**
-		 * A component-like value representing a dynamic intrinsic tag.
-		 *
-		 * Usage (type-only):
-		 *   const Tag = as.tag('a');
-		 *   <Tag static href="..." />
-		 */
-		//#region Dynamic tag support (`as.tag`)
-
-		/**
-		 * Tag-name helpers.
-		 *
-		 * Motivation: we want `as.tag()` to accept any string tag name, but we don't
-		 * want the type parameter to collapse to plain `string`, because that would
-		 * prevent TS from preserving literals like `'a'` and `'es-button'`.
-		 */
 		type AnyTagName = string & Record<never, never>;
+
 		interface IntrinsicElements extends
-			LitJSX.HTMLElementTags,
-			LitJSX.HTMLElementDeprecatedTags,
-			LitJSX.SVGElementTags,
-			LitJSX.SemanticTags,
-			LitJSX.CustomElementTags {}
-		type IntrinsicTagName = keyof IntrinsicElements;
-		type DeclaredCustomElementTagName = keyof HTMLElementTagNameMap;
-		type KnownTagName = IntrinsicTagName | DeclaredCustomElementTagName;
-		type TagName = KnownTagName | AnyTagName;
+			NativeHTMLElements,
+			NativeSVGElements,
+			NativeMathMLElements,
+			SemanticTags {}
 
-		type DynamicTagProps<Tag extends string> =
-			Tag extends keyof IntrinsicElements
-				? IntrinsicElements[Tag]
-				: (
-					Tag extends keyof HTMLElementTagNameMap
-						? HTMLAttributes<HTMLElementTagNameMap[Tag]> & Record<string, unknown>
-						: HTMLAttributes<HTMLElement> & Record<string, unknown>
-				);
+		type TagName = keyof IntrinsicElements | AnyTagName;
 
-		type ConstructorInstance<C> = C extends abstract new (...args: any[]) => infer I ? I : never;
-		type IntrinsicElementProps<Tag extends IntrinsicTagName> = IntrinsicElements[Tag];
+		type DynamicTagProps<Tag extends string> = Tag extends keyof IntrinsicElements
+			? IntrinsicElements[Tag]
+			: (Tag extends keyof HTMLElementTagNameMap
+				? JSXElementProps<HTMLElementTagNameMap[Tag]>
+				: JSXElementProps<HTMLElement>);
 
-		type DynamicTag<Tag extends TagName> =
-			((props: DynamicTagProps<Tag> & StaticMarker) => Element)
-			& { readonly __tag: Tag; };
-		//#endregion
+		type IntrinsicElementProps<Tag extends keyof IntrinsicElements> = IntrinsicElements[Tag];
 
-		//#region Compiler markers
+		type DynamicTag<Tag extends TagName> = ((props: DynamicTagProps<Tag> & StaticMarker) => Element);
 
-		/**
-		 * `static` is a special attribute used by the compiler to decide whether a
-		 * component renders as a custom element.
-		 */
 		interface StaticMarker {
 			/**
-			 * Opt into the lit-jsx custom-element transform.
+			 * Opt into the lit-jsx custom-element transform. \
 			 * Example: `<MyElement static />`
 			 */
 			static: true;
 		}
-		//#endregion
 
-		/**
-		 * Permissive marker for "class identifiers used as JSX components".
-		 *
-		 * Why: TS normally treats `class Foo extends HTMLElement {}` as a constructor value, which is not
-		 * callable. If your JSX transform rewrites `<Foo />` into something else, you may still want TS to
-		 * accept `Foo` in component position.
-		 *
-		 * This makes *any* `new (...args) => any` acceptable as a component value for typing purposes.
-		 */
-		/**
-		 * A constructable value that can appear in JSX component position.
-		 *
-		 * Important: this is intentionally generic so TS can apply TSX type
-		 * arguments, e.g. `<MyElement<string> />`.
-		 */
+		type Component<P extends object = {}> = (props: P) => Element;
 		type ClassComponent<Instance extends object = any> = abstract new (...args: any[]) => Instance;
 
-		/**
-		 * A value that can appear as `<X ... />`.
-		 *
-		 * - Functions model normal functional components.
-		 * - Classes (including `class Foo extends HTMLElement`) are allowed because
-		 *   many transforms rewrite them; for type-checking, props can be provided
-		 *   via the `__jsxProps` marker.
-		 */
 		type ComponentLike<P extends object = object> =
 			| Component<P>
 			| ClassComponent<any>;
-
-		type IntrinsicTagLiteral = IntrinsicTagName & (string & {});
-
-		//#region Attribute/prop inference helpers
 
 		type ComponentProps<T> =
 			T extends Component<infer P> ? P :
 				T extends ClassComponent<infer I> ? JSXProps<Extract<I, object>> :
 					T extends abstract new (...args: any[]) => infer I ? JSXProps<Extract<I, object>> :
 						{};
-		//#endregion
-
-		//#region Shared helpers used across DOM attributes
-
-		type CanBeNothingValue<V> =
-			| V
-			| typeof nothing;
-		type CanBeNothing<T extends object> = {
-			[K in keyof T]?: CanBeNothingValue<T[K]>;
-		};
-
-		/**
-		 * Props for a component instance.
-		 *
-		 * Note: we intentionally avoid letting `HTMLAttributes<T>` override keys that
-		 * already exist on the instance props (e.g. a custom element field named
-		 * `value`). If we don't, intersections like `value: T | null` with
-		 * `value?: unknown` will degrade IntelliSense to `unknown`.
-		 */
-		type JSXProps<T extends object> =
-			& CanBeNothing<ExcludeHTML<T>>
-			& Omit<HTMLAttributes<T>, keyof ExcludeHTML<T>>
-			& {};
-		//#endregion
 	}
-
-	//#region Global compiler helpers
-	// This is a type-only API surface: the compiler strips these calls at build time.
 
 	// eslint-disable-next-line no-var
 	var as: {
@@ -208,5 +120,4 @@ declare global {
 		 */
 		tag:  <Tag extends LitJSX.TagName>(tag: Tag) => LitJSX.DynamicTag<Tag>;
 	};
-	//#endregion
 }
