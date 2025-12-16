@@ -21,7 +21,7 @@ export const ATTR_NAMES = {
 	CLASS_LIST:   'classList',
 	STYLE_LIST:   'styleList',
 	DIRECTIVE:    'directive',
-	EVENT_PREFIX: 'on-',
+	EVENT_PREFIX: 'on',
 } as const;
 export const ATTR_BIND_OBJ_NAME = 'as';
 export const ATTR_VALUES = {

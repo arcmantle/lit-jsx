@@ -41,6 +41,7 @@
 		"validate-html-nesting": "catalog:"
 	},
 	"devDependencies": {
+		"@types/node": "catalog:",
 		"oxc-parser": "catalog:",
 		"oxc-walker": "catalog:",
 		"typescript": "catalog:",

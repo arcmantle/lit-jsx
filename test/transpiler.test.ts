@@ -883,6 +883,128 @@ suite('JSX to Lit Transpiler Tests', () => {
 		`));
 	});
 
+	// ========== EVENT BINDING TESTS ==========
+
+	test('transforms element with event binding (onclick)', ({ expect }) => {
+		const source = `
+		const handleClick = () => console.log('clicked');
+		const template = <button onclick={handleClick}>Click me</button>;
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t, EventPart } from "@arcmantle/lit-jsx";
+			const _temp = {
+			  "h": __$t\`<button>Click me</button>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "click",
+			    "strings": ["", ""],
+			    "ctor": EventPart
+			  }]
+			};
+			const handleClick = () => console.log('clicked');
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [handleClick]
+			};
+		`));
+	});
+
+	test('transforms element with event binding (onmouseover)', ({ expect }) => {
+		const source = `
+		const handleMouseOver = () => console.log('mouse over');
+		const template = <div onmouseover={handleMouseOver}>Hover me</div>;
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t, EventPart } from "@arcmantle/lit-jsx";
+			const _temp = {
+			  "h": __$t\`<div>Hover me</div>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "mouseover",
+			    "strings": ["", ""],
+			    "ctor": EventPart
+			  }]
+			};
+			const handleMouseOver = () => console.log('mouse over');
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [handleMouseOver]
+			};
+		`));
+	});
+
+	test('transforms element with multiple event bindings', ({ expect }) => {
+		const source = `
+		const handleClick = () => console.log('clicked');
+		const handleKeyDown = (e) => console.log('key:', e.key);
+		const template = <input onclick={handleClick} onkeydown={handleKeyDown} />;
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t, EventPart } from "@arcmantle/lit-jsx";
+			const _temp = {
+			  "h": __$t\`<input></input>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "click",
+			    "strings": ["", ""],
+			    "ctor": EventPart
+			  }, {
+			    "type": 1,
+			    "index": 0,
+			    "name": "keydown",
+			    "strings": ["", ""],
+			    "ctor": EventPart
+			  }]
+			};
+			const handleClick = () => console.log('clicked');
+			const handleKeyDown = e => console.log('key:', e.key);
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [handleClick, handleKeyDown]
+			};
+		`));
+	});
+
+	test('transforms element with event binding and other attributes', ({ expect }) => {
+		const source = `
+		const handleSubmit = (e) => e.preventDefault();
+		const template = <form onsubmit={handleSubmit} class="my-form" method="post">Content</form>;
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		expect(code).toBe(dedent(`
+			import { __$t, EventPart } from "@arcmantle/lit-jsx";
+			const _temp = {
+			  "h": __$t\`<form class="my-form" method="post">Content</form>\`,
+			  "parts": [{
+			    "type": 1,
+			    "index": 0,
+			    "name": "submit",
+			    "strings": ["", ""],
+			    "ctor": EventPart
+			  }]
+			};
+			const handleSubmit = e => e.preventDefault();
+			const template = {
+			  "_$litType$": _temp,
+			  "values": [handleSubmit]
+			};
+		`));
+	});
+
 	// ========== NESTING & COMBINATION TESTS ==========
 
 	test('transforms nested elements', ({ expect }) => {
@@ -1144,12 +1266,12 @@ suite('JSX to Lit Transpiler Tests', () => {
 		const Button = toTag('custom-button');
 		const isSubmitting = false;
 		const template = (
-			<form onSubmit={handleSubmit}>
+			<form onsubmit={handleSubmit}>
 				<FormField label="Username" required static>
 					<input
 						type="text"
 						value={formData.username}
-						onChange={handleChange}
+						onchange={handleChange}
 						disabled={as.bool(isSubmitting)}
 					/>
 				</FormField>
@@ -1157,7 +1279,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 					<input
 						type="email"
 						value={formData.email}
-						onChange={handleChange}
+						onchange={handleChange}
 					/>
 				</FormField>
 				<div class="form-actions">
@@ -1185,7 +1307,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 			const Button = toTag('custom-button');
 			const __$Button = __$literalMap.get(Button);
 			const isSubmitting = false;
-			const template = __$htmlStatic\`<form onSubmit=\${handleSubmit}><\${__$FormField} label="Username" required><input type="text" value=\${formData.username} onChange=\${handleChange} ?disabled=\${isSubmitting}></\${__$FormField}></\${__$FormField}><\${__$FormField} label="Email"><input type="email" value=\${formData.email} onChange=\${handleChange}></\${__$FormField}></\${__$FormField}><div class="form-actions"><\${__$Button} type="submit" variant="primary" ?disabled=\${isSubmitting} \${loading(isSubmitting)}>\${isSubmitting ? 'Submitting...' : 'Submit'}</\${__$Button}>\${ValidationMessages({
+			const template = __$htmlStatic\`<form @submit=\${handleSubmit}><\${__$FormField} label="Username" required><input type="text" value=\${formData.username} @change=\${handleChange} ?disabled=\${isSubmitting}></\${__$FormField}></\${__$FormField}><\${__$FormField} label="Email"><input type="email" value=\${formData.email} @change=\${handleChange}></\${__$FormField}></\${__$FormField}><div class="form-actions"><\${__$Button} type="submit" variant="primary" ?disabled=\${isSubmitting} \${loading(isSubmitting)}>\${isSubmitting ? 'Submitting...' : 'Submit'}</\${__$Button}>\${ValidationMessages({
 			  errors: errors
 			})}</div></form>\`;
 		`));
@@ -1342,7 +1464,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 			<Portal target="body" static>
 				<Modal
 					open={as.bool(isOpen)}
-					onClose={handleClose}
+					onclose={handleClose}
 					directive={[
 						trapFocus(),
 						preventScroll(),
@@ -1355,7 +1477,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 						<Button
 							variant="ghost"
 							size="small"
-							onClick={handleClose}
+							onclick={handleClose}
 							aria-label="Close"
 							static
 						>
@@ -1375,7 +1497,7 @@ suite('JSX to Lit Transpiler Tests', () => {
 							<Button
 								key={action.id}
 								variant={action.variant || 'secondary'}
-								onClick={action.handler}
+								onclick={action.handler}
 								disabled={as.bool(action.disabled)}
 								static
 							>
@@ -1398,11 +1520,11 @@ suite('JSX to Lit Transpiler Tests', () => {
 			const __$Portal = __$literalMap.get(Portal);
 			const Button = toTag('ui-button');
 			const __$Button = __$literalMap.get(Button);
-			const template = __$htmlStatic\`<\${__$Portal} target="body"><\${__$Modal} ?open=\${isOpen} onClose=\${handleClose} \${trapFocus()} \${preventScroll()} \${clickOutside(handleClose)}><div class="modal-header"><h2>\${title}</\${__$Modal}><\${__$Button} variant="ghost" size="small" onClick=\${handleClose} aria-label="Close">\${CloseIcon({})}</\${__$Button}></\${__$Modal}><div class="modal-body">\${content || DefaultContent({
+			const template = __$htmlStatic\`<\${__$Portal} target="body"><\${__$Modal} ?open=\${isOpen} @close=\${handleClose} \${trapFocus()} \${preventScroll()} \${clickOutside(handleClose)}><div class="modal-header"><h2>\${title}</\${__$Modal}><\${__$Button} variant="ghost" size="small" @click=\${handleClose} aria-label="Close">\${CloseIcon({})}</\${__$Button}></\${__$Modal}><div class="modal-body">\${content || DefaultContent({
 			  type: contentType,
 			  data: contentData
 			})}</\${__$Modal}><div class="modal-footer">\${actions.map(action => {
-			  return __$htmlStatic\`<\${__$Button} key=\${action.id} variant=\${action.variant || 'secondary'} onClick=\${action.handler} ?disabled=\${action.disabled}>\${action.label}</\${__$Button}>\`;
+			  return __$htmlStatic\`<\${__$Button} key=\${action.id} variant=\${action.variant || 'secondary'} @click=\${action.handler} ?disabled=\${action.disabled}>\${action.label}</\${__$Button}>\`;
 			})}</\${__$Modal}></\${__$Modal}></\${__$Portal}>\`;
 		`));
 	});

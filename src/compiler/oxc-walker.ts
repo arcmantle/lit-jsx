@@ -1,19 +1,19 @@
-import oxc from 'oxc-parser';
+import { type Node, type Program } from 'oxc-parser';
 import { ScopeTracker, walk } from 'oxc-walker';
 
 
 type WalkerContext = ThisParameterType<NonNullable<Parameters<typeof walk>[1]['enter']>>;
 type WalkerCallbackContext = Parameters<NonNullable<Parameters<typeof walk>[1]['enter']>>[2];
-type NodeWalker<T extends oxc.Node['type']> = (
-	node: Extract<oxc.Node, { type: T; }>,
-	parent: oxc.Node | null,
+type NodeWalker<T extends Node['type']> = (
+	node: Extract<Node, { type: T; }>,
+	parent: Node | null,
 	ctx: WalkerContext,
 	scope: ScopeTracker,
 	cbCtx: WalkerCallbackContext
 ) => void;
 
 
-export const oxcWalker = (input: oxc.Program | oxc.Node, options: Partial<{
+export const oxcWalker = (input: Program | Node, options: Partial<{
 	callExpression: NodeWalker<'CallExpression'>;
 }>): void => {
 	const scopeTracker = new ScopeTracker();

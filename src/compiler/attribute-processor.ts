@@ -263,7 +263,7 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 	}
 
 	protected createEvent(attr: JSXAttributeWithExpression, context: TContext): [ string, t.Expression ] {
-		return [ attr.name.name.toString().slice(3), attr.value.expression ];
+		return [ attr.name.name.toString().slice(ATTR_NAMES.EVENT_PREFIX.length), attr.value.expression ];
 	}
 
 	protected createExpression(attr: JSXAttributeWithExpression, context: TContext): [string, t.Expression] {
