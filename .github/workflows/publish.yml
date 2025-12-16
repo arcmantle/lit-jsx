@@ -4,6 +4,42 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      triggered-by:
+        description: "What triggered this workflow"
+        required: false
+        type: string
+        default: "manual"
+      dep-map:
+        description: "JSON map of dependencies to update"
+        required: false
+        type: string
+        default: "{}"
+      pre-build-script:
+        description: "Custom script to run before build"
+        required: false
+        default: ""
+        type: string
+      additional-deps:
+        description: "Additional build dependencies to install"
+        required: false
+        default: ""
+        type: string
+      version-increment:
+        description: "Version increment type (patch, minor, major, prerelease)"
+        required: false
+        default: "patch"
+        type: string
+      node-version:
+        description: "Node.js version to use"
+        required: false
+        default: "24"
+        type: string
+      access:
+        description: "Package access level (public, restricted)"
+        required: false
+        default: "public"
+        type: string
 
 jobs:
   publish:
