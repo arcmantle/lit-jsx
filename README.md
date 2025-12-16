@@ -15,10 +15,10 @@ function TodoItem({ todo, onToggle, onDelete }) {
         type="checkbox"
         checked={as.prop(todo.completed)}
         disabled={as.bool(todo.readonly)}
-        on-change={() => onToggle(todo.id)}
+        onchange={() => onToggle(todo.id)}
       />
       <span>{todo.text}</span>
-      <button on-click={() => onDelete(todo.id)}>Delete</button>
+      <button onclick={() => onDelete(todo.id)}>Delete</button>
     </div>
   );
 }
@@ -41,13 +41,13 @@ html`
 ### ✨ Key Benefits
 
 - **⚡ Zero Runtime Overhead**: Pure compile-time transformation to native Lit templates
-- **🎯 Type-Safe**: Full TypeScript support with comprehensive JSX type definitions
+- **🎯 Type-Safe**: Comprehensive TypeScript support with native DOM type mappings for accurate IntelliSense and type checking
 - **🔧 Vite Integration**: Seamless setup with the included Vite plugin
 - **🎨 Lit Ecosystem**: Works with all Lit directives, custom elements, and patterns
 - **🎛️ Flexible Binding**: Fine-grained control over attribute, property, and boolean bindings
 - **🏷️ Dynamic Tags**: Support for conditional element types with static template optimization
 - **📦 Function Components**: Full support for composable function components
-- **🔗 Custom Elements**: Type-safe integration with Lit-based custom elements
+- **🔗 Custom Elements**: Use LitElement classes directly in JSX with automatic generic type support
 - **🧩 Library Components**: Built-in `For`, `Show`, and `Choose` components for common rendering patterns
 
 ## 📦 Installation
@@ -119,20 +119,16 @@ export class MyComponent extends LitElement {
 
 ### Custom Element Identification
 
-lit-jsx needs to know which elements are custom elements or dynamic tags to compile them correctly. By default, custom elements and dynamic tags must be identified using the `static` attribute:
+lit-jsx needs to know which elements are custom elements to compile them correctly. Custom elements must be identified using the `static` attribute:
 
 ```tsx
 // ✅ Custom elements - requires static attribute
-<my-custom-element static prop={value}>Content</my-custom-element>
-<MyButton static onClick={handleClick}>Click me</MyButton>
-
-// ✅ Dynamic tags - requires static attribute
-const Tag = toTag('button');
-<Tag static onClick={handleClick}>Dynamic button</Tag>
+<my-custom-element static prop={as.prop(value)}>Content</my-custom-element>
+<MyButton static onclick={handleClick}>Click me</MyButton>
 
 // ✅ Regular HTML elements - no static attribute needed
-<div className="container">
-  <button onClick={handleClick}>Regular button</button>
+<div class="container">
+  <button onclick={handleClick}>Regular button</button>
 </div>
 ```
 
@@ -181,10 +177,14 @@ lit-jsx provides precise control over how values are bound to elements:
 
 #### Event Handlers
 
+Event handlers use standard React-style `onevent` syntax with lowercase event names:
+
 ```tsx
-<button on-click={handleClick} on-dblclick={handleDoubleClick}>
+<button onclick={handleClick} ondblclick={handleDoubleClick}>
 // Compiles to: <button @click=${handleClick} @dblclick=${handleDoubleClick}>
 ```
+
+Common event handlers include `onclick`, `onchange`, `onsubmit`, `onkeydown`, `onmouseover`, etc.
 
 #### References
 
@@ -218,11 +218,11 @@ lit-jsx provides precise control over how values are bound to elements:
 lit-jsx fully supports function components that return JSX:
 
 ```tsx
-const Button = ({ label, variant = 'primary', disabled, onClick, children }) => (
+const Button = ({ label, variant = 'primary', disabled, onclick, children }) => (
   <button
     classList={{ [`btn-${variant}`]: true, 'disabled': disabled }}
     disabled={as.bool(disabled)}
-    on-click={onClick}
+    onclick={onclick}
   >
     {label || children}
   </button>
@@ -232,8 +232,8 @@ const Button = ({ label, variant = 'primary', disabled, onClick, children }) => 
 <Button
   label="Submit"
   variant="success"
-  onClick={handleSubmit}
-  disabled={isLoading}
+  onclick={handleSubmit}
+  disabled={as.bool(isLoading)}
 />
 ```
 
@@ -246,10 +246,9 @@ Function components:
 
 ### Custom Element Integration
 
-Use `toComponent()` for type-safe custom element components:
+lit-jsx provides full type-safe integration with custom elements. You can use LitElement classes directly in JSX:
 
 ```tsx
-import { toComponent } from '@arcmantle/lit-jsx';
 import { LitElement } from 'lit';
 
 export class MyButton extends LitElement {
@@ -260,22 +259,19 @@ export class MyButton extends LitElement {
   }
 }
 
-const MyButtonComponent = toComponent(MyButton);
-
-// Usage with type safety - requires static attribute to identify as custom element
-<MyButtonComponent
+// Usage - use the class directly with the static attribute
+<MyButton
   static
   class="custom-btn"
-  onClick={() => console.log('Clicked!')}
+  onclick={() => console.log('Clicked!')}
 />
 ```
 
 #### Generic Custom Elements
 
-For custom elements with generic types, you must use explicit type annotations due to TypeScript's inability to forward generic parameters through `toComponent()`:
+lit-jsx provides automatic support for generic custom element classes with full type safety:
 
 ```tsx
-import { toComponent } from '@arcmantle/lit-jsx';
 import { LitElement } from 'lit';
 
 class DataList<T> extends LitElement {
@@ -295,39 +291,34 @@ class DataList<T> extends LitElement {
   }
 }
 
-// ❌ This won't work - TypeScript can't forward the generic parameter
-// const DataListComponent = toComponent(DataList);
-
-// ✅ Required: Explicit type annotation to preserve generic functionality
-const DataListComponent: <T>(props: JSX.JSXProps<DataList<T>>) => string =
-  toComponent(DataList);
-
-// Usage with explicit type parameter
-<DataListComponent<User>
+// ✅ Use the class directly with type parameters - generics work automatically!
+<DataList<User>
   static
-  items={users}
-  renderItem={(user) => `${user.name} (${user.email})`}
+  items={as.prop(users)}
+  renderItem={as.prop((user) => `${user.name} (${user.email})`)}
 />
 
-// Type inference works for the renderItem callback
-<DataListComponent<Product>
+// Type inference works perfectly for the renderItem callback
+<DataList<Product>
   static
-  items={products}
-  renderItem={(product) => `${product.name} - $${product.price}`}
+  items={as.prop(products)}
+  renderItem={as.prop((product) => `${product.name} - $${product.price}`)}
 />
 ```
 
-**Important**: The explicit type annotation `<T>(props: JSX.JSXProps<DataList<T>>) => string` is **required** for generic custom elements. Without this annotation, TypeScript will lose the generic type information and you won't be able to use type parameters like `<User>` or `<Product>` when using the component.
+**Note**: Generic type parameters are automatically preserved when using classes directly in JSX. No manual type annotations needed!
 
 #### Parameter Typing for Custom Elements
 
-When writing functions that accept custom element components as parameters, you must use proper TypeScript typing:
+When writing functions that accept custom element classes as parameters, use proper TypeScript typing:
 
 ```tsx
-import { toComponent, ToComponent } from '@arcmantle/lit-jsx';
+import { LitElement } from 'lit';
 
-// ✅ Using ToComponent type annotation
-function renderWithWrapper(Component: ToComponent) {
+// ✅ Using the class constructor type directly
+function renderWithWrapper<T extends typeof LitElement>(
+  Component: T
+) {
   return ({ children, ...props }) => (
     <div class="wrapper">
       <Component static {...props}>{children}</Component>
@@ -335,11 +326,12 @@ function renderWithWrapper(Component: ToComponent) {
   );
 }
 
-// ✅ Using typeof with a toComponent() reference
-const MyButton = toComponent(MyButtonElement);
-function enhanceButton(ButtonComponent: typeof MyButton) {
+// ✅ Using specific class types
+function createEnhancer(Component: typeof MyButton) {
   return ({ enhanced, ...props }) => (
-    <ButtonComponent static class={enhanced ? 'enhanced' : ''} {...props} />
+    <div class={enhanced ? 'enhanced' : ''}>
+      <Component static {...props} />
+    </div>
   );
 }
 
@@ -349,17 +341,15 @@ function renderComponent(Component: any) {
 }
 ```
 
-**Important**: Without proper typing (`ToComponent` or `typeof` reference), the compiler cannot determine that a parameter represents a custom element component, which will result in compilation errors.
+**Important**: Proper typing allows the compiler to recognize custom elements and apply the correct transformations.
 
 ### Dynamic Tag Names
 
-lit-jsx supports dynamic element types using the `toTag()` helper:
+lit-jsx supports dynamic element types using the `as.tag()` helper:
 
 ```tsx
-import { toTag } from '@arcmantle/lit-jsx';
-
 function ActionElement({ href, children }) {
-  const Tag = toTag(href ? 'a' : 'button');
+  const Tag = as.tag(href ? 'a' : 'button');
 
   return (
     <Tag static href={href} class="action-element">
@@ -369,39 +359,15 @@ function ActionElement({ href, children }) {
 }
 ```
 
-The compiler automatically detects when `toTag()` is used and optimizes the template accordingly.
-
-#### Parameter Typing for Dynamic Tags
-
-When writing functions that accept dynamic tag parameters, you must use proper TypeScript typing to ensure the compiler correctly identifies them:
+The `as.tag()` helper signals to the compiler that this is a dynamic tag, allowing it to optimize the template using Lit's static templates.
 
 ```tsx
-import { toTag, ToTag } from '@arcmantle/lit-jsx';
+function DynamicElement({ useDiv, children }) {
+  const Tag = as.tag(useDiv ? 'div' : 'span');
 
-// ✅ Using ToTag type annotation
-function createWrapper(TagName: ToTag) {
-  return ({ children, ...props }) => (
-    <TagName static {...props}>{children}</TagName>
-  );
+  return <Tag static>{children}</Tag>;
 }
-
-// ✅ Using typeof with a toTag() reference
-const ButtonTag = toTag('button');
-function createButton(Element: typeof ButtonTag) {
-  return ({ label, ...props }) => (
-    <Element static {...props}>{label}</Element>
-  );
-}
-
-// ❌ This won't work - compiler can't detect the dynamic tag
-function createElement(TagName: string) {
-  return <TagName>Content</TagName>; // Error: TagName not recognized
-}
-```
-
-**Important**: Without proper typing, the compiler cannot determine that a parameter represents a dynamic tag, which will result in compilation errors.
-
-### Library Components
+```### Library Components
 
 lit-jsx provides utility components that enhance common patterns and integrate seamlessly with Lit directives:
 
@@ -626,7 +592,7 @@ export class UserDashboard extends LitElement {
           {() => (
             <div class="empty-state">
               <p>No users found</p>
-              <button on-click={this.loadUsers}>Load Users</button>
+              <button onclick={this.loadUsers}>Load Users</button>
             </div>
           )}
         </Show>
@@ -701,17 +667,17 @@ export class TodoList extends LitElement {
             ref={this.inputRef}
             value={as.prop(this.newItemText)}
             placeholder="Add new todo..."
-            on-input={(e) => this.newItemText = e.target.value}
-            on-keydown={(e) => e.key === 'Enter' && this.addItem()}
+            oninput={(e) => this.newItemText = e.target.value}
+            onkeydown={(e) => e.key === 'Enter' && this.addItem()}
           />
-          <button on-click={this.addItem}>Add</button>
+          <button onclick={this.addItem}>Add</button>
         </div>
 
         <div class="filters">
           {['all', 'active', 'completed'].map(filterType => (
             <button
               classList={{ active: this.filter === filterType }}
-              on-click={() => this.filter = filterType}
+              onclick={() => this.filter = filterType}
             >
               {filterType}
             </button>
@@ -771,16 +737,16 @@ Starting in v1.0.33, import discovery is disabled by default. This means:
 The `static` attribute tells the compiler that an element is a custom element or dynamic tag:
 
 ```tsx
-// ✅ New default way - using static attribute
+// ✅ Using static attribute for custom elements
 <MyButton static>Click me</MyButton>
-<MyCustomElement static prop={value}>Content</MyCustomElement>
+<MyCustomElement static prop={as.prop(value)}>Content</MyCustomElement>
 
-// ✅ For dynamic tags with toTag()
-const Tag = toTag(href ? 'a' : 'button');
+// ✅ For dynamic tags with as.tag()
+const Tag = as.tag(href ? 'a' : 'button');
 <Tag static href={href}>Dynamic element</Tag>
 
-// ❌ Old way - no longer works by default
-<MyButton>Click me</MyButton> // Treated as regular HTML element
+// ❌ Without static attribute - treated as regular HTML element
+<MyButton>Click me</MyButton>
 
 // ✅ To restore old behavior, enable import discovery
 // vite.config.ts: litJsx({ useImportDiscovery: true })
@@ -842,7 +808,7 @@ lit-jsx automatically detects and uses the appropriate template type:
 
 ### Dynamic Tag Best Practices
 
-- Always use `toTag()` to define your dynamic tags.
+- Always use `as.tag()` to define your dynamic tags
 - Use descriptive variable names for clarity
 - Consider TypeScript for better type safety with HTML elements
 - Document complex dynamic tag logic
@@ -855,68 +821,54 @@ lit-jsx is designed to work seamlessly with the entire Lit ecosystem:
 - **Lit Directives**: All official and community directives work out of the box
 - **Custom Elements**: Easy integration with any custom elements
 - **Web Components**: Standard web component patterns and lifecycle
-- **TypeScript**: Comprehensive type definitions for the best developer experience
+- **TypeScript**: Leverages native browser type definitions (`lib.dom.d.ts`) for accurate type checking and exceptional IntelliSense support
 
 ## 📚 Migration Guide
 
-### From v1.0.32 to v1.0.33
+### Migrating from Earlier Versions
 
-#### Breaking Change: Import Discovery → Static Attribute
+If you're upgrading from v1.0.33 or earlier, please check the [CHANGELOG](./CHANGELOG.md) for breaking changes and migration instructions. Key changes include:
 
-**Old way (v1.0.28 and earlier):**
+- **v1.0.34**: Event handlers now use React-style syntax (`onclick` instead of `on-click`)
+- **v1.0.33**: Custom elements require the `static` attribute for identification
 
-```tsx
-import { toComponent } from '@arcmantle/lit-jsx';
+### Coming from React
 
-const MyButton = toComponent(MyButtonElement);
-
-// Worked automatically - no static attribute needed
-<MyButton on-click={handleClick}>Click me</MyButton>
-<my-custom-element prop={value}>Content</my-custom-element>
-```
-
-**New way (v1.0.33+):**
-
-```tsx
-import { toComponent } from '@arcmantle/lit-jsx';
-
-const MyButton = toComponent(MyButtonElement);
-
-// Requires static attribute to identify as custom element
-<MyButton static on-click={handleClick}>Click me</MyButton>
-<my-custom-element static prop={value}>Content</my-custom-element>
-
-// Or restore old behavior in vite.config.ts
-litJsx({ useImportDiscovery: true })
-```
-
-#### Migration Steps
-
-1. **Add `static` attribute** to all custom elements and dynamic tags in your JSX
-2. **Or enable import discovery** by setting `useImportDiscovery: true` in your Vite config
-3. **Compiled templates** are now enabled by default - no action needed
-
-### From React JSX
-
-lit-jsx syntax is very similar to React, with a few key differences:
+lit-jsx uses familiar JSX syntax with native DOM attribute names:
 
 ```tsx
 // React
-<button onClick={handler} className="btn" />
+<button onClick={handler} className="btn" disabled={true} />
 
 // lit-jsx
-<button on-click={handler} class="btn" />
+<button onclick={handler} class="btn" disabled={as.bool(true)} />
 ```
 
-### From Lit html Templates
+Key differences:
+
+- Event handlers: `onclick`, `onchange`, etc. (lowercase, no camelCase)
+- Class attribute: `class` instead of `className`
+- Boolean attributes: Use `as.bool()` for proper binding
+- Property binding: Use `as.prop()` for DOM properties
+
+### Coming from Lit html Templates
+
+lit-jsx provides a more intuitive syntax for Lit templates:
 
 ```tsx
 // Lit html
-html`<div class=${classMap(classes)}>${content}</div>`
+html`<div class=${classMap(classes)} @click=${handler}>${content}</div>`
 
 // lit-jsx
-<div classList={classes}>{content}</div>
+<div classList={classes} onclick={handler}>{content}</div>
 ```
+
+Benefits:
+
+- Familiar JSX syntax with better IDE support
+- Type-safe components and props
+- Cleaner, more readable code
+- Full access to all Lit features and directives
 
 ## 🤝 Contributing
 
