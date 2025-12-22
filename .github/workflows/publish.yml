@@ -44,5 +44,13 @@ on:
 jobs:
   publish:
     uses: arcmantle/github-workflows/.github/workflows/pnpm-publish.yml@main
+    with:
+      triggered-by:  ${{ inputs.triggered-by }}
+      dep-map: ${{ inputs.dep-map }}
+      pre-build-script: ${{ inputs.pre-build-script }}
+      additional-deps: ${{ inputs.additional-deps }}
+      version-increment: ${{ inputs.version-increment }}
+      node-version: ${{ inputs.node-version }}
+      access: ${{ inputs.access }}
     secrets:
       NPM_PUBLISH: ${{ secrets.NPM_PUBLISH }}
