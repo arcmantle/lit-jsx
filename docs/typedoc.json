@@ -1,0 +1,41 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "tsconfig": "./tsconfig.typedoc.json",
+  "entryPoints": ["../src"],
+  "entryPointStrategy": "expand",
+  "out": "./api/reference",
+  "plugin": ["typedoc-plugin-markdown"],
+  "outputFileStrategy": "modules",
+  "flattenOutputFiles": false,
+  "fileExtension": ".md",
+  "hidePageHeader": true,
+  "hideBreadcrumbs": false,
+  "disableSources": false,
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "categorizeByGroup": true,
+  "defaultCategory": "Other",
+  "categoryOrder": [
+    "Runtime",
+    "Compiler",
+    "Shared",
+    "Utils",
+    "*"
+  ],
+  "sort": [
+    "kind",
+    "instance-first",
+    "required-first",
+    "alphabetical"
+  ],
+  "kindSortOrder": [
+    "Function",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Variable",
+    "Enum"
+  ]
+}

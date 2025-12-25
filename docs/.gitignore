@@ -1,0 +1,6 @@
+# Generated API documentation
+/api/reference/
+
+# VitePress build output
+/.vitepress/dist
+/.vitepress/cache

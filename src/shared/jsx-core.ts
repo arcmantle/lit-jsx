@@ -10,11 +10,13 @@ declare global {
 
 		type HTMLElementProps = HTMLElementAssignableProps<HTMLElement>;
 
-		type JSXElementProps<T extends object> = HTMLElementAssignableProps<T> & {
+		type JSXElementProps<T extends object> = Omit<HTMLElementAssignableProps<T>, 'style'> & {
 			children?:  LitJSX.Child;
 			ref?:       RefOrCallback<HTMLElementAssignableProps<T>>;
 			classList?: { [k: string]: boolean | undefined; };
 			styleList?: CSSProperties;
+			class?:     { [k: string]: boolean | undefined; } | string;
+			style?:     CSSProperties | string;
 
 			/**
 			 * This property takes in one or more element directives.

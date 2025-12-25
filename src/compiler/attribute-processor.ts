@@ -267,7 +267,26 @@ abstract class AttributeProcessor<TContext extends ProcessorContext> {
 	}
 
 	protected createExpression(attr: JSXAttributeWithExpression, context: TContext): [string, t.Expression] {
-		return [ attr.name.name.toString(), attr.value.expression ];
+		const name = attr.name.name.toString();
+		let expression = attr.value.expression;
+
+		// Automatically wrap object literals in classMap/styleMap for convenience
+		if (name === 'class' && t.isObjectExpression(expression)) {
+			context.importsUsed.add('classMap');
+			expression = t.callExpression(
+				t.identifier(VARIABLES.CLASS_MAP_LOCAL),
+				[ expression ],
+			);
+		}
+		else if (name === 'style' && t.isObjectExpression(expression)) {
+			context.importsUsed.add('styleMap');
+			expression = t.callExpression(
+				t.identifier(VARIABLES.STYLE_MAP_LOCAL),
+				[ expression ],
+			);
+		}
+
+		return [ name, expression ];
 	}
 
 	protected createNonExpression(attr: JSXAttributeWithoutExpression, context: TContext): [string, string] {

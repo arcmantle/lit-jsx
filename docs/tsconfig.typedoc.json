@@ -1,0 +1,14 @@
+{
+	"extends": "../src/tsconfig.json",
+	"compilerOptions": {
+		"rootDir": ".."
+	},
+	"include": ["../src/**/*"],
+	"exclude": [
+		"../test/**/*",
+		"../**/*.test.ts",
+		"../**/*.bench.ts",
+		"../**/*.typecheck.ts",
+		"../**/*.typecheck.tsx"
+	]
+}

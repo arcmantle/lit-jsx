@@ -25,6 +25,10 @@
 	"scripts": {
 		"build": "rimraf dist && tsc --project ./src/tsconfig.json",
 		"dev": "vite build --watch --mode=development",
+		"docs:build": "typedoc --options docs/typedoc.json && vitepress build docs",
+		"docs:dev": "vitepress dev docs",
+		"docs:preview": "vitepress preview docs",
+		"docs:typedoc": "typedoc --options docs/typedoc.json",
 		"test": "pnpm vitest run"
 	},
 	"dependencies": {
@@ -44,8 +48,11 @@
 		"@types/node": "catalog:",
 		"oxc-parser": "catalog:",
 		"oxc-walker": "catalog:",
+		"typedoc": "catalog:",
+		"typedoc-plugin-markdown": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:",
+		"vitepress": "catalog:",
 		"vitest": "catalog:"
 	}
 }
