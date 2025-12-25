@@ -140,9 +140,8 @@ jobs:
         with:
           version: latest
 
-      - name: Install build dependencies
-        if: ${{ inputs.build-dependencies != '' }}
-        run: pnpm add -D ${{ inputs.build-dependencies }}
+      - name: Install common build dependencies.
+        run: pnpm add -D rimraf typescript @arcmantle/tsconfig @types/node ${{ inputs.additional-deps }}
 
       - name: Install TypeDoc globally
         run: pnpm add -g typedoc
