@@ -28,24 +28,23 @@ export default defineConfig({
 The plugin accepts several configuration options:
 
 ```ts
-interface LitJsxOptions {
-  // File patterns to include (default: /\.(tsx|jsx)$/)
-  include?: RegExp | RegExp[]
+interface LitJsxPluginOptions {
+  // Enable legacy decorators support
+  legacyDecorators?: boolean
 
-  // File patterns to exclude (default: /node_modules/)
-  exclude?: RegExp | RegExp[]
+  // Enables support for experimental compiled templates (default: true)
+  useCompiledTemplates?: boolean
 
-  // Enable debug logging
+  // Opts into automatic discovery of custom elements instead of using the static attribute
+  useImportDiscovery?: boolean
+
+  // Enable debug mode for additional logging
   debug?: boolean
 
-  // Custom transformer options
-  transformer?: {
-    // Import source for JSX runtime
-    importSource?: string
-
-    // Enable development mode
-    development?: boolean
-  }
+  // Options for the Babel transform
+  babel?:
+    | babel.TransformOptions
+    | ((code: string, id: string) => babel.TransformOptions | Promise<babel.TransformOptions>)
 }
 ```
 
@@ -58,47 +57,68 @@ import { litJsx } from '@arcmantle/lit-jsx/vite'
 export default defineConfig({
   plugins: [
     litJsx({
-      include: /\.(tsx|jsx)$/,
-      exclude: [/node_modules/, /\.test\.tsx$/],
+      useCompiledTemplates: true,
+      useImportDiscovery: true,
       debug: process.env.DEBUG === 'true',
-      transformer: {
-        development: process.env.NODE_ENV === 'development',
+      legacyDecorators: false,
+      babel: {
+        // Additional Babel options if needed
+        plugins: [],
       },
     }),
   ],
 })
 ```
 
-## File Patterns
+## Compiled Templates
 
-### Include Pattern
-
-Control which files are processed by the plugin:
+By default, the plugin uses compiled templates for optimal performance:
 
 ```ts
 litJsx({
-  // Process only .tsx files
-  include: /\.tsx$/,
-
-  // Process multiple patterns
-  include: [/\.tsx$/, /\.jsx$/],
+  // Compiled templates are enabled by default
+  useCompiledTemplates: true,
 })
 ```
 
-### Exclude Pattern
+Compiled templates provide:
+- Better performance at runtime
+- Smaller bundle sizes
+- Static analysis optimizations
 
-Exclude files from processing:
+You can disable them if needed:
 
 ```ts
 litJsx({
-  // Exclude node_modules and test files
-  exclude: [/node_modules/, /\.test\.(tsx|jsx)$/],
+  useCompiledTemplates: false,
+})
+```
+
+## Import Discovery
+
+Enable automatic discovery of custom elements:
+
+```ts
+litJsx({
+  useImportDiscovery: true,
+})
+```
+
+When enabled, the plugin automatically detects custom elements from imports, eliminating the need for the `static` attribute on component classes.
+
+## Legacy Decorators
+
+If you're using legacy decorators:
+
+```ts
+litJsx({
+  legacyDecorators: true,
 })
 ```
 
 ## Debug Mode
 
-Enable debug logging to see what the plugin is doing:
+Enable debug logging to see transformation details:
 
 ```ts
 litJsx({
@@ -106,36 +126,37 @@ litJsx({
 })
 ```
 
-This will log:
+Debug mode provides:
+- Detailed transformation logs
+- Processing information
+- Helpful for troubleshooting
 
-- Files being processed
-- Transformation steps
-- Generated code
-- Performance metrics
+## Custom Babel Configuration
 
-## Development vs Production
-
-The plugin automatically detects the environment, but you can override it:
+You can provide custom Babel options:
 
 ```ts
 litJsx({
-  transformer: {
-    development: process.env.NODE_ENV === 'development',
+  babel: {
+    plugins: [
+      // Additional Babel plugins
+    ],
+    // Other Babel options
   },
 })
 ```
 
-Development mode:
+Or use a function for dynamic configuration:
 
-- Includes source maps
-- Adds additional debug information
-- May skip some optimizations
-
-Production mode:
-
-- Optimized output
-- No debug information
-- Smaller bundle size
+```ts
+litJsx({
+  babel: (code, id) => {
+    return {
+      plugins: id.includes('test') ? [] : ['some-plugin'],
+    }
+  },
+})
+```
 
 ## TypeScript Integration
 
@@ -153,12 +174,7 @@ The plugin works seamlessly with TypeScript. Ensure your `tsconfig.json` is conf
 
 ## HMR (Hot Module Replacement)
 
-The plugin supports HMR out of the box. Changes to JSX files will trigger fast updates without full page reloads.
-
-```ts
-// No special configuration needed
-litJsx()
-```
+The plugin includes HMR support that invalidates the module graph when JSX files change. However, due to the nature of web components and custom elements, **changes require a full page reload** to properly re-register custom elements and update the component definitions.
 
 ## Build Optimization
 
@@ -169,9 +185,9 @@ The plugin optimizes the output during build:
 - Tree-shakes unused code
 - Minifies output
 
-## Multiple Configurations
+## Complete Configuration Example
 
-You can use different configurations for different file patterns:
+Here's a complete example with all options:
 
 ```ts
 import { defineConfig } from 'vite'
@@ -179,16 +195,13 @@ import { litJsx } from '@arcmantle/lit-jsx/vite'
 
 export default defineConfig({
   plugins: [
-    // Main app files
     litJsx({
-      include: /src\/.*\.tsx$/,
-    }),
-
-    // Test files with different settings
-    litJsx({
-      include: /test\/.*\.tsx$/,
-      transformer: {
-        development: true,
+      useCompiledTemplates: true,
+      useImportDiscovery: true,
+      debug: process.env.DEBUG === 'true',
+      legacyDecorators: false,
+      babel: {
+        // Custom Babel options if needed
       },
     }),
   ],
@@ -199,13 +212,9 @@ export default defineConfig({
 
 ### JSX Not Transforming
 
-Ensure your file extension matches the include pattern:
-
-```ts
-litJsx({
-  include: /\.(tsx|jsx)$/,  // Matches both .tsx and .jsx
-})
-```
+The plugin automatically processes `.jsx` and `.tsx` files. Ensure:
+- Your file has the correct extension
+- JSX syntax is present in the file (the plugin filters by `/>` and `</` in the code)
 
 ### Type Errors
 
@@ -220,14 +229,13 @@ Make sure TypeScript is configured correctly:
 }
 ```
 
-### Performance Issues
+### Custom Elements Not Detected
 
-For large projects, narrow the include pattern:
+If custom elements aren't being recognized, try enabling import discovery:
 
 ```ts
 litJsx({
-  include: /src\/.*\.tsx$/,  // Only process src directory
-  exclude: [/node_modules/, /dist/],
+  useImportDiscovery: true,
 })
 ```
 

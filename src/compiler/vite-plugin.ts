@@ -7,13 +7,7 @@ import { babelPlugins, debugMode } from './config.js';
 import { ImportDiscovery } from './import-discovery.js';
 
 
-/**
- * Vite plugin for jsx-lit with preserve-JSX compilation.
- *
- * This plugin uses Babel to transform JSX directly into Lit templates at build time,
- * providing optimal performance by eliminating runtime JSX processing entirely.
- */
-export const litJsx = (options: {
+export interface LitJsxPluginOptions {
 	/**  Enable legacy decorators support */
 	legacyDecorators?:     boolean;
 	/** Enables support for experimental compiled templates @default true */
@@ -26,7 +20,16 @@ export const litJsx = (options: {
 	babel?:
 		| babel.TransformOptions
 		| ((code: string, id: string) => babel.TransformOptions | Promise<babel.TransformOptions>);
-} = {}): PluginOption => {
+}
+
+
+/**
+ * Vite plugin for jsx-lit with preserve-JSX compilation.
+ *
+ * This plugin uses Babel to transform JSX directly into Lit templates at build time,
+ * providing optimal performance by eliminating runtime JSX processing entirely.
+ */
+export const litJsx = (options: LitJsxPluginOptions = {}): PluginOption => {
 	let projectRoot: string;
 
 	debugMode.value = !!options.debug;

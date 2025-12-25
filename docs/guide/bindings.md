@@ -173,7 +173,7 @@ function MyComponent() {
 
   return (
     <>
-      <input ref={as.directive(ref(inputRef))} type="text" />
+      <input ref={ref(inputRef)} type="text" />
       <button onclick={focusInput}>Focus Input</button>
     </>
   )
@@ -182,7 +182,7 @@ function MyComponent() {
 
 ## Directive Bindings
 
-Use `as.directive()` for Lit directives:
+Lit directives can be used directly:
 
 ```tsx
 import { until } from 'lit/directives/until.js'
@@ -196,10 +196,10 @@ function AsyncContent() {
 
   return (
     <div>
-      {as.directive(until(
+      {until(
         fetchData().then(data => <div>{data}</div>),
         <div>Loading...</div>
-      ))}
+      )}
     </div>
   )
 }
@@ -207,7 +207,7 @@ function AsyncContent() {
 function ConditionalRender({ show, content }) {
   return (
     <div>
-      {as.directive(when(show, () => content))}
+      {when(show, () => content)}
     </div>
   )
 }

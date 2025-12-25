@@ -25,7 +25,7 @@ Configure your `tsconfig.json` for lit-jsx:
 
 ### Key Options
 
-- `jsx: "react-jsx"` - Use the modern JSX transform
+- `jsx: "preserve"` - Required for lit-jsx to transform JSX at build time
 - `jsxImportSource: "@arcmantle/lit-jsx"` - Point to lit-jsx runtime
 - `strict: true` - Enable all strict type checking
 
@@ -329,27 +329,42 @@ function VideoPlayer() {
 
   return (
     <div>
-      <video ref={as.directive(ref(videoRef))} src="video.mp4" />
+      <video ref={ref(videoRef)} src="video.mp4" />
       <button onclick={play}>Play</button>
     </div>
   )
 }
 ```
 
-## JSX Namespace
+## Custom Element Types
 
-You can extend the JSX namespace for custom elements:
+Define custom element types using the standard `HTMLElementTagNameMap`:
 
 ```tsx
 declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'my-custom-element': {
-        name?: string
-        count?: number
-        onchange?: (e: CustomEvent) => void
-      }
-    }
+  interface HTMLElementTagNameMap {
+    'my-custom-element': MyCustomElement
+  }
+}
+
+// Define your element class
+class MyCustomElement extends HTMLElement {
+  name?: string
+  count?: number
+
+  // Custom event handling
+  addEventListener(
+    type: 'change',
+    listener: (this: MyCustomElement, ev: CustomEvent) => any,
+    options?: boolean | AddEventListenerOptions
+  ): void
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions
+  ): void
+  addEventListener(type: any, listener: any, options?: any): void {
+    super.addEventListener(type, listener, options)
   }
 }
 
@@ -360,6 +375,8 @@ declare global {
   onchange={(e) => console.log(e.detail)}
 />
 ```
+
+This is the standard TypeScript approach for typing custom elements and provides better IDE support.
 
 ## Next Steps
 

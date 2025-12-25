@@ -87,11 +87,11 @@ import { repeat } from 'lit/directives/repeat.js'
 function TodoList({ todos }) {
   return (
     <ul>
-      {as.directive(repeat(
+      {repeat(
         todos,
         (todo) => todo.id,  // Key function
         (todo) => <li>{todo.text}</li>
-      ))}
+      )}
     </ul>
   )
 }
@@ -114,9 +114,9 @@ function ExpensiveComponent({ data }) {
 
   return (
     <div>
-      {as.directive(guard([data], () => (
+      {guard([data], () => (
         <div>{processData(data)}</div>
-      )))}
+      ))}
     </div>
   )
 }

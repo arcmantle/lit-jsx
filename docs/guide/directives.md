@@ -4,11 +4,11 @@ Learn how to use Lit directives with lit-jsx.
 
 ## Overview
 
-Lit directives are special values that can control how values are rendered to the DOM. lit-jsx supports all Lit directives through the `as.directive()` helper.
+Lit directives are special values that can control how values are rendered to the DOM. lit-jsx supports all Lit directives directly.
 
 ## Using Directives
 
-Import directives from `lit/directives/*` and wrap them with `as.directive()`:
+Import directives from `lit/directives/*` and use them directly:
 
 ```tsx
 import { until } from 'lit/directives/until.js'
@@ -19,7 +19,7 @@ function MyComponent() {
 
   return (
     <div>
-      {as.directive(until(asyncData, <div>Loading...</div>))}
+      {until(asyncData, <div>Loading...</div>)}
     </div>
   )
 }
@@ -43,10 +43,10 @@ function AsyncComponent() {
 
   return (
     <div>
-      {as.directive(until(
+      {until(
         loadUser(),
         <div>Loading user...</div>
-      ))}
+      )}
     </div>
   )
 }
@@ -63,11 +63,11 @@ function ConditionalContent({ showDetails, summary, details }) {
   return (
     <div>
       <div>{summary}</div>
-      {as.directive(when(
+      {when(
         showDetails,
         () => <div class="details">{details}</div>,
         () => <button>Show Details</button>
-      ))}
+      )}
     </div>
   )
 }
@@ -83,11 +83,11 @@ import { repeat } from 'lit/directives/repeat.js'
 function TodoList({ todos }) {
   return (
     <ul>
-      {as.directive(repeat(
+      {repeat(
         todos,
         (todo) => todo.id,
         (todo) => <li>{todo.text}</li>
-      ))}
+      )}
     </ul>
   )
 }
@@ -113,7 +113,7 @@ function VideoPlayer() {
 
   return (
     <div>
-      <video ref={as.directive(ref(videoRef))} src="video.mp4" />
+      <video ref={ref(videoRef)} src="video.mp4" />
       <button onclick={play}>Play</button>
       <button onclick={pause}>Pause</button>
     </div>
@@ -131,12 +131,12 @@ import { cache } from 'lit/directives/cache.js'
 function TabPanel({ activeTab }) {
   return (
     <div>
-      {as.directive(cache(
+      {cache(
         activeTab === 'home' ? <HomePage /> :
         activeTab === 'profile' ? <ProfilePage /> :
         activeTab === 'settings' ? <SettingsPage /> :
         <NotFound />
-      ))}
+      )}
     </div>
   )
 }
@@ -153,7 +153,7 @@ function LiveInput({ value }) {
   return (
     <input
       type="text"
-      value={as.directive(live(value))}
+      value={live(value)}
     />
   )
 }
@@ -169,8 +169,8 @@ import { ifDefined } from 'lit/directives/if-defined.js'
 function OptionalAttributes({ id, title }) {
   return (
     <div
-      id={as.directive(ifDefined(id))}
-      title={as.directive(ifDefined(title))}
+      id={ifDefined(id)}
+      title={ifDefined(title)}
     >
       Content
     </div>
@@ -193,9 +193,9 @@ function ExpensiveRender({ data }) {
 
   return (
     <div>
-      {as.directive(guard([data], () => (
+      {guard([data], () => (
         <div>{expensiveTransform(data)}</div>
-      )))}
+      ))}
     </div>
   )
 }
@@ -211,7 +211,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 function RawHTML({ htmlString }) {
   return (
     <div>
-      {as.directive(unsafeHTML(htmlString))}
+      {unsafeHTML(htmlString)}
     </div>
   )
 }
@@ -227,7 +227,7 @@ import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
 function SVGIcon({ svgString }) {
   return (
     <div>
-      {as.directive(unsafeSVG(svgString))}
+      {unsafeSVG(svgString)}
     </div>
   )
 }
@@ -297,7 +297,7 @@ const highlight = directive(HighlightDirective)
 function SearchResults({ text, search }) {
   return (
     <div>
-      {as.directive(highlight(text, search))}
+      {highlight(text, search)}
     </div>
   )
 }
