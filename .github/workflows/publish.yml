@@ -1,8 +1,6 @@
 name: Publish Package
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
     inputs:
       triggered-by:
@@ -10,11 +8,21 @@ on:
         required: false
         type: string
         default: "manual"
-      dep-map:
-        description: "JSON map of dependencies to update"
+      dep-map-artifact:
+        description: "Artifact name containing the dependency map JSON"
         required: false
         type: string
-        default: "{}"
+        default: ""
+      source-repo:
+        description: "Source repository (owner/repo) that triggered this workflow"
+        required: false
+        type: string
+        default: ""
+      source-run-id:
+        description: "Source workflow run ID"
+        required: false
+        type: string
+        default: ""
       pre-build-script:
         description: "Custom script to run before build"
         required: false
@@ -46,7 +54,9 @@ jobs:
     uses: arcmantle/github-workflows/.github/workflows/pnpm-publish.yml@main
     with:
       triggered-by:  ${{ inputs.triggered-by }}
-      dep-map: ${{ inputs.dep-map }}
+      dep-map-artifact: ${{ inputs.dep-map-artifact }}
+      source-repo: ${{ inputs.source-repo }}
+      source-run-id: ${{ inputs.source-run-id }}
       pre-build-script: ${{ inputs.pre-build-script }}
       additional-deps: ${{ inputs.additional-deps }}
       version-increment: ${{ inputs.version-increment }}
