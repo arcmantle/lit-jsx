@@ -33,6 +33,7 @@ declare global {
 		 * lit-jsx uses this to:
 		 * - require `static: true` for class-based component tags
 		 * - preserve TSX generic arguments on class instances (avoid `unknown` props)
+		 * - provide proper type inference for functional component props
 		 */
 		type LibraryManagedAttributes<C, P>
 			= C extends abstract new (...args: any[]) => infer I
@@ -41,7 +42,7 @@ declare global {
 					: LitJSX.ComponentProps<C> & LitJSX.StaticMarker)
 				: (C extends keyof LitJSX.IntrinsicElements
 					? LitJSX.IntrinsicElementProps<C>
-					: LitJSX.ComponentProps<C>);
+					: P);
 
 		/**
 		 * TSX hook: controls the instance type used for class components.

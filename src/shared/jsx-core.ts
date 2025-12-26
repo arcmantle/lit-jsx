@@ -1,4 +1,3 @@
-import type { TemplateResult } from 'lit-html';
 import type { DirectiveResult } from 'lit-html/async-directive.js';
 import type { RefOrCallback } from 'lit-html/directives/ref.js';
 
@@ -52,8 +51,7 @@ declare global {
 			& Omit<HTMLElementProps, keyof TrimHTMLElement<T>>;
 
 		type Child = unknown;
-
-		type Element = TemplateResult<any>;
+		type Element = unknown;
 
 		type AnyTagName = string & Record<never, never>;
 
