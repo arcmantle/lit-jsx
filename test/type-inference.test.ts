@@ -1,13 +1,19 @@
 /* eslint-disable @stylistic/max-len */
 
 import * as babel from '@babel/core';
-import { suite, test } from 'vitest';
+import { afterEach, suite, test } from 'vitest';
 
 import { litJsxBabelPlugin } from '../src/compiler/babel-plugin.ts';
 import { babelPlugins } from '../src/compiler/config.ts';
+import { cleanupTypeInference } from '../src/compiler/ts-program-manager.ts';
 
 
 suite('Type Inference Tests', () => {
+	// Clean up Language Service between tests for isolation
+	afterEach(() => {
+		cleanupTypeInference();
+	});
+
 	const getOpts = (useTypeInference = true): babel.TransformOptions => {
 		return {
 			filename: import.meta.filename,
@@ -211,6 +217,22 @@ suite('Type Inference Tests', () => {
 
 		// Manual static attribute should take precedence
 		expect(code).toContain('__$htmlStatic');
+	});
+
+	test('detects union of string literals as static', ({ expect }) => {
+		const source = `
+			type TagName = "a" | "div" | "button";
+			const MyElement: TagName = "div";
+
+			const template = <MyElement />;
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		// Union of string literals should be treated as static
+		expect(code).toContain('__$htmlStatic');
+		expect(code).toContain('__$literalMap');
+		expect(code).not.toContain('MyElement({})');
 	});
 
 	// ========== EDGE CASES ==========

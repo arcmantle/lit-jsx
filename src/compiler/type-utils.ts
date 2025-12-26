@@ -78,6 +78,15 @@ function checkTypeForStaticOrDynamic(
 	if (type.flags & ts.TypeFlags.StringLiteral)
 		return true;
 
+	// Check if it's a union type of string literals (e.g., "a" | "div" | "button")
+	if (type.flags & ts.TypeFlags.Union) {
+		const unionType = type as ts.UnionType;
+		// If ALL union members are string literals, treat as static
+		const allStringLiterals = unionType.types.every(t => t.flags & ts.TypeFlags.StringLiteral);
+		if (allStringLiterals)
+			return true;
+	}
+
 	// Check if it's a class type
 	if (type.symbol?.flags & ts.SymbolFlags.Class)
 		return true;

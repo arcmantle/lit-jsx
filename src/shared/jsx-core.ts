@@ -80,7 +80,7 @@ declare global {
 			 * Opt into the lit-jsx custom-element transform. \
 			 * Example: `<MyElement static />`
 			 */
-			static: true;
+			static?: true;
 		}
 
 		type Component<P extends object = {}> = (props: P) => Element;

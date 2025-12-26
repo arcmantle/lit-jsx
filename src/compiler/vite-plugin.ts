@@ -5,6 +5,7 @@ import type { EnvironmentModuleNode, PluginOption } from 'vite';
 import { litJsxBabelPlugin } from './babel-plugin.js';
 import { babelPlugins, debugMode } from './config.js';
 import { ImportDiscovery } from './import-discovery.js';
+import { cleanupTypeInference } from './ts-program-manager.js';
 
 
 export interface LitJsxPluginOptions {
@@ -14,6 +15,8 @@ export interface LitJsxPluginOptions {
 	useCompiledTemplates?: boolean;
 	/** Opts into the automatic discovery is custom elements instead of using the static attribute */
 	useImportDiscovery?:   boolean;
+	/** Enable TypeScript type inference for automatic static/dynamic element detection */
+	useTypeInference?:     boolean;
 	/** Enable debug mode for additional logging */
 	debug?:                boolean;
 	/** Options for the Babel transform */
@@ -71,6 +74,7 @@ export const litJsx = (options: LitJsxPluginOptions = {}): PluginOption => {
 							litJsxBabelPlugin({
 								useCompiledTemplates: options.useCompiledTemplates,
 								useImportDiscovery:   options.useImportDiscovery,
+								useTypeInference:     options.useTypeInference,
 							}),
 						],
 						ast:        false,
@@ -95,8 +99,22 @@ export const litJsx = (options: LitJsxPluginOptions = {}): PluginOption => {
 				}
 			},
 		},
+		buildEnd() {
+			// Clean up TypeScript Language Service after build completes
+			if (options.useTypeInference)
+				cleanupTypeInference();
+		},
+		closeBundle() {
+			// Clean up TypeScript Language Service when dev server stops
+			if (options.useTypeInference)
+				cleanupTypeInference();
+		},
 		hotUpdate: {
 			handler(ctx) {
+				// Only needed when useImportDiscovery is enabled
+				if (!options.useImportDiscovery)
+					return;
+
 				// Only process files that our transform handles
 				if (!ctx.file.match(/\.(jsx|tsx)$/))
 					return;
