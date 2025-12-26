@@ -4,12 +4,23 @@ import type { RefOrCallback } from 'lit-html/directives/ref.js';
 
 declare global {
 	namespace LitJSX {
+
+		interface ExcludedComponentProps {
+			'html-element': keyof HTMLElement;
+		}
+
+		type ExcludedKeys = {
+			[K in keyof ExcludedComponentProps]: ExcludedComponentProps[K];
+		}[keyof ExcludedComponentProps];
+
 		type HTMLElementAssignableProps<T extends object & Record<string, any>> =
 			Partial<TrimReadonly<T>>;
 
 		type HTMLElementProps = HTMLElementAssignableProps<HTMLElement>;
 
-		type JSXElementProps<T extends object> = Omit<HTMLElementAssignableProps<T>, 'style'> & {
+		type JSXElementProps<T extends object> = SpecialProps<HTMLElementAssignableProps<T>>;
+
+		type SpecialProps<T extends object = object> = Omit<T, 'style'> & {
 			children?:  LitJSX.Child;
 			ref?:       RefOrCallback<HTMLElementAssignableProps<T>>;
 			classList?: { [k: string]: boolean | undefined; };
@@ -44,10 +55,12 @@ declare global {
 
 		type TrimReadonly<T> = Pick<T, WritableKeys<T>>;
 
-		type TrimHTMLElement<T extends object> = TrimReadonly<Omit<T, keyof HTMLElement | 'constructor'>>;
+		type TrimHTMLElement<T extends object> = TrimReadonly<
+			Omit<T, ExcludedKeys | 'constructor'>
+		>;
 
-		type JSXProps<T extends object> =
-			& TrimHTMLElement<T>
+		type JSXProps<T extends object>
+			= TrimHTMLElement<T>
 			& Omit<HTMLElementProps, keyof TrimHTMLElement<T>>;
 
 		type Child = unknown;

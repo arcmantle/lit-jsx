@@ -35,13 +35,18 @@ declare global {
 		 * - preserve TSX generic arguments on class instances (avoid `unknown` props)
 		 * - provide proper type inference for functional component props
 		 */
-		type LibraryManagedAttributes<C, P>
+		type LibraryManagedAttributes<C, P extends object>
 			= C extends abstract new (...args: any[]) => infer I
+				// if C is a class component constructor
 				? (P extends I
-					? LitJSX.JSXProps<Extract<P, object>> & LitJSX.StaticMarker
-					: LitJSX.ComponentProps<C> & LitJSX.StaticMarker)
+					// if props P are compatible with instance I
+					? LitJSX.SpecialProps<LitJSX.JSXProps<P>> & LitJSX.StaticMarker
+					// else fall back to general props for I
+					: LitJSX.SpecialProps<LitJSX.ComponentProps<C>> & LitJSX.StaticMarker)
+				// if C is a functional component or intrinsic element
 				: (C extends keyof LitJSX.IntrinsicElements
 					? LitJSX.IntrinsicElementProps<C>
+					// intrinsic element
 					: P);
 
 		/**
