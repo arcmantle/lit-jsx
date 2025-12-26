@@ -95,10 +95,11 @@ export const ERROR_MESSAGES = {
 interface PluginOptions {
 	useCompiledTemplates?: boolean;
 	useImportDiscovery?:   boolean;
+	useTypeInference?:     boolean;
 }
 
 
-export const initializePluginOptions = (file: BabelFile): { useCompiledTemplates?: boolean; } => {
+export const initializePluginOptions = (file: BabelFile): PluginOptions => {
 	if (optionsInitialized)
 		return options;
 
@@ -112,8 +113,6 @@ export const initializePluginOptions = (file: BabelFile): { useCompiledTemplates
 
 	for (const [ key, value ] of Object.entries(pluginOptions))
 		options[key as keyof typeof options] = value as any;
-
-	console.log(`Lit JSX plugin options initialized:`, options);
 
 	return pluginOptions;
 };

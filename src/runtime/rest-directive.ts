@@ -41,8 +41,6 @@ class RestDirective extends Directive {
 	}
 
 	override render(rest: Record<keyof any, any>): unknown {
-		console.log('rest parameter stuff', rest);
-
 		return noChange;
 	}
 

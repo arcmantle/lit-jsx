@@ -10,6 +10,7 @@ import { hasCustomElementIdentifier, type ProcessorContext } from './attribute-p
 import { traverse } from './babel-traverse.js';
 import { babelPlugins, ERROR_MESSAGES, options, SOURCES, VARIABLES } from './config.js';
 import { isDynamicOrCustomElement } from './import-discovery.js';
+import { isClassOrCustomElementByType } from './type-utils.js';
 
 
 export type Values<T> = T[keyof T];
@@ -603,6 +604,14 @@ export const isJSXCustomElementComponent = (
 	if (hasCustomElementIdentifier(node.openingElement.attributes))
 		return true;
 
+	// Try type inference if enabled
+	if (options.useTypeInference && t.isJSXElement(node)) {
+		const filename = getPathFilename(path);
+		const isStatic = isClassOrCustomElementByType(path as NodePath<t.JSXElement>, filename);
+		if (isStatic === true)
+			return true;
+	}
+
 	if (options.useImportDiscovery) {
 		if (isDynamicOrCustomElement(path.get('openingElement')))
 			return true;
@@ -627,6 +636,14 @@ export const isJSXFunctionElementComponent = (
 
 	if (hasCustomElementIdentifier(node.openingElement.attributes))
 		return false;
+
+	// Check type inference - if it's a class/custom element, it's not a function component
+	if (options.useTypeInference && t.isJSXElement(node)) {
+		const filename = getPathFilename(path);
+		const isStatic = isClassOrCustomElementByType(path as NodePath<t.JSXElement>, filename);
+		if (isStatic === true)
+			return false;
+	}
 
 	if (options.useImportDiscovery) {
 		if (isDynamicOrCustomElement(path.get('openingElement')))
