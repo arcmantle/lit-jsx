@@ -1,8 +1,8 @@
 import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
-import * as ts from 'typescript';
+import ts from 'typescript';
 
-import { getSourceFile, getTypeChecker } from './ts-program-manager.js';
+import { ensureImportLoaded, getCachedTypeCheck, getSourceFile, getTypeChecker, hasCachedTypeCheck, setCachedTypeCheck } from './ts-program-manager.js';
 
 
 /**
@@ -17,53 +17,61 @@ export const isClassOrCustomElementByType = (
 	path: NodePath<t.JSXElement>,
 	filename: string,
 ): boolean | undefined => {
-	const typeChecker = getTypeChecker();
-	const sourceFile = getSourceFile(filename);
-
-	// Try normalizing the path
-	if (!sourceFile && filename) {
-		const normalizedPath = filename.replace(/\\/g, '/');
-		const altSourceFile = getSourceFile(normalizedPath);
-		if (altSourceFile)
-			return isClassOrCustomElementByType(path, normalizedPath);
-	}
-
-	if (!typeChecker || !sourceFile)
-		return undefined; // Type checking not available
+	// Normalize path once at the start
+	const normalizedFilename = filename.replace(/\\/g, '/');
 
 	// Get the tag name from the JSX element
 	const openingElement = path.node.openingElement;
 	if (!t.isJSXIdentifier(openingElement.name))
 		return undefined;
 
-
 	const tagName = openingElement.name.name;
 
-	// First, try to find the symbol at the JSX usage location
-	// This works for both local declarations and imports
-	const identifier = findIdentifierInJSX(sourceFile, tagName);
-	if (identifier) {
-		const symbol = typeChecker.getSymbolAtLocation(identifier);
+	// Check cache first (10-100x faster for repeated checks)
+	// Use has-check to properly handle cached undefined values
+	if (hasCachedTypeCheck(normalizedFilename, tagName))
+		return getCachedTypeCheck(normalizedFilename, tagName);
 
-		if (symbol) {
-			// Get the type of the symbol (this follows imports automatically)
-			const type = typeChecker.getTypeOfSymbolAtLocation(symbol, identifier);
+	const typeChecker = getTypeChecker();
+	const sourceFile = getSourceFile(normalizedFilename);
 
-			return checkTypeForStaticOrDynamic(tagName, type, typeChecker);
-		}
+	if (!typeChecker || !sourceFile) {
+		// Cache the undefined result to avoid repeated failed lookups
+		setCachedTypeCheck(normalizedFilename, tagName, undefined);
+
+		return undefined;
 	}
 
-	// Fallback: Find the declaration of this identifier in the TypeScript AST
-	const declaration = findDeclarationByName(sourceFile, tagName);
-	if (!declaration)
-		return undefined;
+	// Lazy-load: Ensure any imported file defining this symbol is loaded
+	// Uses Language Service's own import analysis (not regex)
+	// Pass normalized filename to avoid re-normalization
+	ensureImportLoaded(tagName, normalizedFilename);
 
-	// Get the type at this location
-	const type = typeChecker.getTypeAtLocation(declaration);
-	if (!type)
-		return undefined;
+	// Find the symbol at the JSX usage location (works for both local declarations and imports)
+	const identifier = findIdentifierInJSX(sourceFile, tagName);
+	if (!identifier) {
+		// Symbol not found in this file
+		setCachedTypeCheck(normalizedFilename, tagName, undefined);
 
-	return checkTypeForStaticOrDynamic(tagName, type, typeChecker);
+		return undefined;
+	}
+
+	const symbol = typeChecker.getSymbolAtLocation(identifier);
+	if (!symbol) {
+		// TypeScript can't resolve the symbol (likely invalid import or missing type info)
+		setCachedTypeCheck(normalizedFilename, tagName, undefined);
+
+		return undefined;
+	}
+
+	// Get the type of the symbol (this follows imports automatically)
+	const type = typeChecker.getTypeOfSymbolAtLocation(symbol, identifier);
+	const result = checkTypeForStaticOrDynamic(tagName, type, typeChecker);
+
+	// Cache the result
+	setCachedTypeCheck(normalizedFilename, tagName, result);
+
+	return result;
 };
 
 /**
@@ -113,82 +121,19 @@ function checkTypeForStaticOrDynamic(
  * This is useful for getting the symbol at the usage location (which works for imports).
  */
 function findIdentifierInJSX(sourceFile: ts.SourceFile, name: string): ts.Identifier | undefined {
-	let found: ts.Identifier | undefined;
-
-	function visit(node: ts.Node): void {
-		if (found)
-			return;
-
+	function visit(node: ts.Node): ts.Identifier | undefined {
 		// Look for JSX elements with the matching tag name
 		if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
 			const tagNameNode = node.tagName;
-			if (ts.isIdentifier(tagNameNode) && tagNameNode.text === name) {
-				found = tagNameNode;
-
-				return;
-			}
+			if (ts.isIdentifier(tagNameNode) && tagNameNode.text === name)
+				return tagNameNode;
 		}
 
-		ts.forEachChild(node, visit);
+		// Continue searching children
+		return ts.forEachChild(node, visit);
 	}
 
-	visit(sourceFile);
-
-	return found;
-}
-
-
-/**
- * Finds a TypeScript AST node at a specific position in the source file.
- */
-function _findNodeAtPosition(sourceFile: ts.SourceFile, pos: number): ts.Node | undefined {
-	function find(node: ts.Node): ts.Node | undefined {
-		if (pos >= node.getStart(sourceFile) && pos < node.getEnd())
-			return ts.forEachChild(node, find) || node;
-
-		return undefined;
-	}
-
-	return find(sourceFile);
-}
-
-/**
- * Finds a declaration by name in the TypeScript AST.
- */
-function findDeclarationByName(sourceFile: ts.SourceFile, name: string): ts.Node | undefined {
-	let found: ts.Node | undefined;
-
-	function visit(node: ts.Node): void {
-		if (found)
-			return;
-
-		// Check for class declarations
-		if (ts.isClassDeclaration(node) && node.name?.text === name) {
-			found = node;
-
-			return;
-		}
-
-		// Check for variable declarations
-		if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === name) {
-			found = node;
-
-			return;
-		}
-
-		// Check for function declarations
-		if (ts.isFunctionDeclaration(node) && node.name?.text === name) {
-			found = node;
-
-			return;
-		}
-
-		ts.forEachChild(node, visit);
-	}
-
-	visit(sourceFile);
-
-	return found;
+	return visit(sourceFile);
 }
 
 

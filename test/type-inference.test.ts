@@ -382,4 +382,55 @@ suite('Type Inference Tests', () => {
 		// External imports can't be type-checked without the actual files
 		expect(code).toBeDefined();
 	});
+
+	// ========== BARREL EXPORTS / RE-EXPORTS ==========
+
+	test('detects class component through barrel export (re-export)', ({ expect }) => {
+		// This test verifies that we follow re-exports to find the actual implementation
+		// Real import chain: component.ts -> index.ts (barrel) -> test
+		const source = `
+			import { BarrelComponent } from './type-inference/barrel/index.ts';
+
+			const template = <BarrelComponent />;
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		// Should detect BarrelComponent as a class (using literalMap, not function call)
+		expect(code).toContain('__$htmlStatic');
+		expect(code).toContain('__$literalMap');
+		expect(code).not.toContain('BarrelComponent({})');
+	});
+
+	test('handles export renaming in barrel files', ({ expect }) => {
+		// Real re-export with renaming: export { RenamedComponent as AliasedComponent } from './component'
+		const source = `
+			import { AliasedComponent } from './type-inference/barrel/index.ts';
+
+			const template = <AliasedComponent />;
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		// Should still detect the class through the renamed export
+		expect(code).toContain('__$htmlStatic');
+		expect(code).toContain('__$literalMap');
+		expect(code).not.toContain('AliasedComponent({})');
+	});
+
+	test('handles export * from barrel files', ({ expect }) => {
+		// Real wildcard re-export: export * from './component'
+		const source = `
+			import { WildcardComponent } from './type-inference/barrel/index.ts';
+
+			const template = <WildcardComponent />;
+		`;
+
+		const code = babel.transformSync(source, getOpts())?.code;
+
+		// Should detect the class through wildcard export
+		expect(code).toContain('__$htmlStatic');
+		expect(code).toContain('__$literalMap');
+		expect(code).not.toContain('WildcardComponent({})');
+	});
 });
