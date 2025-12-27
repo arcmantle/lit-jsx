@@ -31,12 +31,10 @@ suite('Import Discovery Tests', () => {
 		};
 	};
 
-	test('can discover a locally defined custom element', ({ expect }) => {
+	test('can discover a class declaration as custom element', ({ expect }) => {
 		const source = `
-			import { toComponent } from '@arcmantle/lit-jsx';
-
 			class CustomElement extends HTMLElement {}
-			const DiscoveryTest = toComponent(CustomElement);
+			const DiscoveryTest = CustomElement;
 
 			const template = (
 				<DiscoveryTest />
@@ -49,13 +47,9 @@ suite('Import Discovery Tests', () => {
 		expect(result.definition).to.be.true;
 	});
 
-	test('can discover a locally defined custom element with reassigned callExpr', ({ expect }) => {
+	test('can discover a class expression as custom element', ({ expect }) => {
 		const source = `
-			import { toComponent } from '@arcmantle/lit-jsx';
-
-			class CustomElement extends HTMLElement {}
-			let DiscoveryTest2 = toComponent(CustomElement);
-			let DiscoveryTest = DiscoveryTest2;
+			const DiscoveryTest = class extends HTMLElement {};
 
 			const template = (
 				<DiscoveryTest />
@@ -68,15 +62,12 @@ suite('Import Discovery Tests', () => {
 		expect(result.definition).to.be.true;
 	});
 
-	test('can discover a locally defined custom element with renamed import', ({ expect }) => {
+	test('can discover a string literal as static element', ({ expect }) => {
 		const source = `
-			import { toComponent as renamed } from '@arcmantle/lit-jsx';
-
-			class CustomElement extends HTMLElement {}
-			let DiscoveryTest = renamed(CustomElement);
+			const Tag = 'my-custom-element';
 
 			const template = (
-				<DiscoveryTest />
+				<Tag />
 			);
 		`;
 
@@ -86,13 +77,13 @@ suite('Import Discovery Tests', () => {
 		expect(result.definition).to.be.true;
 	});
 
-	test('can discovery a custom element from a function parameter with type annotation', ({ expect }) => {
+	test('can discover a template literal as static element', ({ expect }) => {
 		const source = `
-			import { toComponent } from '@arcmantle/lit-jsx';
+			const Tag = \`my-custom-element\`;
 
-			const DiscoveryTest = toComponent(new class extends HTMLElement {});
-
-			const template = (Element: typeof DiscoveryTest) => <Element />;
+			const template = (
+				<Tag />
+			);
 		`;
 
 		const result: { definition: boolean; } = { definition: false };
@@ -116,11 +107,10 @@ suite('Import Discovery Tests', () => {
 		expect(result.definition).to.be.true;
 	});
 
-	test('can discover a root declared tag element', ({ expect }) => {
+	test('can discover a string literal with variable reassignment', ({ expect }) => {
 		const source = `
-			import { toTag } from '@arcmantle/lit-jsx';
-
-			const Tag = toTag('discovery-test');
+			const originalTag = 'discovery-test';
+			const Tag = originalTag;
 			const template = () => <Tag />;
 		`;
 
@@ -130,17 +120,15 @@ suite('Import Discovery Tests', () => {
 		expect(result.definition).to.be.true;
 	});
 
-	test('can discover a scoped tag element', ({ expect }) => {
+	test('can discover a class with variable reassignment chain', ({ expect }) => {
 		const source = `
-			import { toTag } from '@arcmantle/lit-jsx';
+			class MyElement extends HTMLElement {}
+			const Intermediate = MyElement;
+			const FinalElement = Intermediate;
 
-			const template = () => {
-				const Tag = toTag('discovery-test');
-
-				return (
-					<Tag />
-				)
-			};
+			const template = (
+				<FinalElement />
+			);
 		`;
 
 		const result: { definition: boolean; } = { definition: false };
@@ -164,38 +152,23 @@ suite('Import Discovery Tests', () => {
 		expect(result.definition).to.be.true;
 	});
 
-	test('can discover minified/renamed toComponent calls with local exports', ({ expect }) => {
+	test('ignores function calls that return unknown types', ({ expect }) => {
 		const source = `
-			import { BadgeCmp } from './import-discovery/minified-example.ts';
+			function createComponent() {
+				return class extends HTMLElement {};
+			}
+
+			const MyElement = createComponent();
 
 			const template = (
-				<BadgeCmp />
+				<MyElement />
 			);
 		`;
 
 		const result: { definition: boolean; } = { definition: false };
 		babel.transformSync(source, getOpts(result))?.code;
 
-		expect(result.definition).to.be.true;
-	});
-
-	test('can discover minified/renamed toComponent calls with barrel exports', ({ expect }) => {
-		// This test uses the minified-example.ts file which simulates:
-		// import { toComponent as f } from '@arcmantle/lit-jsx';
-		// const v = f(Badge);
-		// export { v as BadgeCmp };
-
-		const source = `
-			import { BadgeCmp } from './import-discovery/minified-entry.ts';
-
-			const template = (
-				<BadgeCmp />
-			);
-		`;
-
-		const result: { definition: boolean; } = { definition: false };
-		babel.transformSync(source, getOpts(result))?.code;
-
-		expect(result.definition).to.be.true;
+		// We can't determine the return type without type checking
+		expect(result.definition).to.be.false;
 	});
 });

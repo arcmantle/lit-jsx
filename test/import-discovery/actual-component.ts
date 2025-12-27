@@ -1,7 +1,4 @@
-import { type ToComponent, toComponent } from '../../src/utils.ts';
-
-
-class MyActualComponent extends HTMLElement {
+export class ActualElement extends HTMLElement {
 
 	static tagName = 'my-actual-component';
 
@@ -14,5 +11,3 @@ class MyActualComponent extends HTMLElement {
 	}
 
 }
-
-export const ActualElement: ToComponent<MyActualComponent> = toComponent(MyActualComponent);

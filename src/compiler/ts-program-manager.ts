@@ -9,8 +9,14 @@ let moduleResolutionCache: ts.ModuleResolutionCache | undefined;
 const fileVersions: Map<string, number> = new Map();
 const fileContents: Map<string, string> = new Map();
 const scriptKinds: Map<string, ts.ScriptKind> = new Map();
-const importMaps: Map<string, Map<string, string>> = new Map(); // filename -> (symbolName -> resolvedPath)
-const typeCheckCache: Map<string, Map<string, boolean | undefined>> = new Map(); // filename -> (symbolName -> isStatic)
+// filename -> (symbolName -> resolvedPath)
+const importMaps: Map<string, Map<string, string>> = new Map();
+// filename -> (symbolName -> isStatic)
+const typeCheckCache: Map<string, Map<string, boolean | undefined>> = new Map();
+// filePath -> (symbolName -> resolvedPath or null if not found)
+const reExportCache: Map<string, Map<string, string | null>> = new Map();
+// containingFile -> (importPath -> resolvedPath)
+const moduleResolutionPathCache: Map<string, Map<string, string | undefined>> = new Map();
 
 // ScriptKind lookup table for O(1) extension detection
 const extensionToScriptKind: Map<string, ts.ScriptKind> = new Map([
@@ -96,6 +102,8 @@ export const initializeTypeInference = (file: BabelFile): void => {
 
 	// Initialize Language Service on first use
 	if (!languageService) {
+		//console.time('TypeScript Language Service: Initialization');
+
 		// Auto-discover tsconfig
 		const tsConfigPath = ts.findConfigFile(
 			normalizedFilename,
@@ -168,6 +176,18 @@ export const initializeTypeInference = (file: BabelFile): void => {
 				return fileContents.get(normalized) ?? ts.sys.readFile(fileName);
 			},
 			resolveModuleNames: (moduleNames, containingFile) => {
+				const normalized = normalizePath(containingFile);
+
+				// OPTIMIZATION: Only resolve imports for files we explicitly loaded
+				// Skip resolution for lib files, node_modules, or files we don't care about
+				// This prevents the Language Service from cascading through the entire dependency tree
+				if (!fileContents.has(normalized)) {
+					// Return undefined for all modules in files we didn't load
+					// This tells TypeScript to skip type-checking this file's imports
+					return moduleNames.map(() => undefined);
+				}
+
+				// For files we loaded, resolve their imports normally
 				return moduleNames.map(moduleName => {
 					const result = ts.resolveModuleName(
 						moduleName,
@@ -183,6 +203,8 @@ export const initializeTypeInference = (file: BabelFile): void => {
 		};
 
 		languageService = ts.createLanguageService(host, ts.createDocumentRegistry());
+
+		//console.timeEnd('TypeScript Language Service: Initialization');
 	}
 
 	// Update or add file to Language Service
@@ -213,10 +235,25 @@ function findReExportSource(
 
 	const normalizedPath = normalizePath(filePath);
 
+	// Check re-export cache first
+	const cached = reExportCache.get(normalizedPath);
+	if (cached?.has(symbolName)) {
+		const result = cached.get(symbolName);
+
+		return result === null ? undefined : result;
+	}
+
 	// Use cached source file from Language Service instead of creating new one
 	const sourceFile = languageService.getProgram()?.getSourceFile(normalizedPath);
-	if (!sourceFile)
+	if (!sourceFile) {
+		// Cache the negative result
+		if (!cached)
+			reExportCache.set(normalizedPath, new Map([ [ symbolName, null ] ]));
+		else
+			cached.set(symbolName, null);
+
 		return undefined;
+	}
 
 	for (const statement of sourceFile.statements) {
 		// Check: export { X } from './file' or export { X as Y } from './file'
@@ -243,20 +280,50 @@ function findReExportSource(
 			}
 
 			if (isReExported) {
-				// Resolve the re-export source
-				const resolution = ts.resolveModuleName(
-					exportPath,
-					normalizedPath,
-					compilerOptions,
-					ts.sys,
-					moduleResolutionCache,
-				);
+				// Check module resolution cache first
+				let pathCache = moduleResolutionPathCache.get(normalizedPath);
+				if (!pathCache) {
+					pathCache = new Map();
+					moduleResolutionPathCache.set(normalizedPath, pathCache);
+				}
 
-				if (resolution.resolvedModule?.resolvedFileName)
-					return normalizePath(resolution.resolvedModule.resolvedFileName);
+				let resolvedPath = pathCache.get(exportPath);
+				if (!resolvedPath) {
+					// Resolve the re-export source
+					const resolution = ts.resolveModuleName(
+						exportPath,
+						normalizedPath,
+						compilerOptions,
+						ts.sys,
+						moduleResolutionCache,
+					);
+
+					if (resolution.resolvedModule?.resolvedFileName) {
+						resolvedPath = normalizePath(resolution.resolvedModule.resolvedFileName);
+						pathCache.set(exportPath, resolvedPath);
+					}
+				}
+
+				if (resolvedPath) {
+					// Cache the result before returning
+					const cache = reExportCache.get(normalizedPath) || new Map();
+					if (!reExportCache.has(normalizedPath))
+						reExportCache.set(normalizedPath, cache);
+
+					cache.set(symbolName, resolvedPath);
+
+					return resolvedPath;
+				}
 			}
 		}
 	}
+
+	// Cache negative result
+	const cache = reExportCache.get(normalizedPath) || new Map();
+	if (!reExportCache.has(normalizedPath))
+		reExportCache.set(normalizedPath, cache);
+
+	cache.set(symbolName, null);
 
 	return undefined;
 }
@@ -475,4 +542,6 @@ export const cleanupTypeInference = (): void => {
 	scriptKinds.clear();
 	importMaps.clear();
 	typeCheckCache.clear();
+	reExportCache.clear();
+	moduleResolutionPathCache.clear();
 };

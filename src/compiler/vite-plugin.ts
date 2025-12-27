@@ -62,6 +62,7 @@ export const litJsx = (options: LitJsxPluginOptions = {}): PluginOption => {
 			order: 'pre',
 			async handler(source, id) {
 				try {
+					console.time(`lit-jsx transform: ${ id }`);
 					const babelUserOptions = options.babel
 						? await resolveAwaitableFunction(options.babel, source, id)
 						: {};
@@ -88,6 +89,8 @@ export const litJsx = (options: LitJsxPluginOptions = {}): PluginOption => {
 
 					const opts = deepmerge(babelUserOptions, babelOptions);
 					const result = (await babel.transformAsync(source, opts))!;
+
+					console.timeEnd(`lit-jsx transform: ${ id }`);
 
 					return {
 						code: result.code!,

@@ -33,6 +33,7 @@ import {
 	VARIABLES,
 	WHITESPACE_TAGS,
 } from './config.js';
+import { isClassByImportDiscovery } from './import-discovery.js';
 import { isClassByType } from './type-utils.js';
 
 
@@ -132,6 +133,9 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 			if (options.useTypeInference && t.isJSXElement(context.path.node)) {
 				const filename = getPathFilename(context.path);
 				isClass = isClassByType(context.path as NodePath<t.JSXElement>, filename) === true;
+			}
+			else if (options.useImportDiscovery) {
+				isClass = isClassByImportDiscovery(context.path.get('openingElement'));
 			}
 
 			const literalIdentifier = Ensure.componentLiteral(

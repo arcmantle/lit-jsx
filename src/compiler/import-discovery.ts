@@ -11,8 +11,6 @@ export class ImportDiscovery {
 
 	static readonly programCache:  Map<string, NodePath<t.Program>> = new Map();
 	static readonly resolvedCache: Map<string, Map<string, boolean>> = new Map();
-	static readonly validCalls:    Set<string> = new Set([ 'toComponent', 'toTag' ]);
-	static readonly validTypes:    Set<string> = new Set([ 'ToComponent', 'ToTag' ]);
 
 	static clearCacheForFile(filePath: string): void {
 		ImportDiscovery.programCache.delete(filePath);
@@ -20,7 +18,8 @@ export class ImportDiscovery {
 	}
 
 	/**
-	 * Finds the definition of a JSX element in the given path.
+	 * Checks if a JSX element is a class (custom element) or string literal (static element).
+	 * Returns true if it's a custom element (class) or static element (string literal).
 	 */
 	isDynamicOrCustomELement(path: NodePath): boolean {
 		if (!t.isJSXOpeningElement(path.node))
@@ -50,127 +49,198 @@ export class ImportDiscovery {
 		if (!binding)
 			return false;
 
-		const isValid = this.hasValidCallAssignment(programPath, binding);
+		const isValid = this.isClassOrStringLiteral(programPath, binding);
 
 		cached.set(elementName, isValid);
 
 		return isValid;
 	}
 
-	protected hasValidCallAssignment(programPath: NodePath<t.Program>, binding: Binding): boolean {
+	/**
+	 * Checks if a JSX element is specifically a class (not a string literal).
+	 * Returns true only for class declarations/expressions, false otherwise.
+	 * Used to determine if .tagName accessor should be used.
+	 */
+	isClassByImportDiscovery(path: NodePath): boolean {
+		if (!t.isJSXOpeningElement(path.node))
+			return false;
+
+		if (!t.isJSXIdentifier(path.node.name))
+			return false;
+
+		const elementName = path.node.name.name;
+
+		if (!isComponent(elementName))
+			return false;
+
+		const programPath = Ensure.findProgramPathFromNodePath(path);
+
+		const binding = path.scope.getBinding(elementName);
+		if (!binding)
+			return false;
+
+		return this.isClass(programPath, binding);
+	}
+
+	/**
+	 * Recursively follows a binding to determine if it resolves to a class (not a string literal).
+	 */
+	protected isClass(programPath: NodePath<t.Program>, binding: Binding): boolean {
 		const node = binding.path.node;
 
+		// Check for class declarations: class MyElement extends HTMLElement {}
+		if (t.isClassDeclaration(node))
+			return true;
+
 		if (t.isVariableDeclarator(node)) {
-			// Check if the variable has a TypeScript type annotation for ToComponent or ToTag
-			if (t.isIdentifier(node.id)) {
-				if (this.hasValidTypeAnnotation(node.id.typeAnnotation))
-					return true;
-			}
+			const init = node.init;
+			if (!init)
+				return false;
 
-			if (t.isCallExpression(node.init)) {
-				const callee = node.init.callee;
+			// Check for class expressions: const MyElement = class {}
+			if (t.isClassExpression(init))
+				return true;
 
-				if (t.isIdentifier(callee)) {
-					const calleeName = callee.name;
+			// String literals are NOT classes
+			if (t.isStringLiteral(init))
+				return false;
 
-					// If the original callee name is a valid call
-					// we don't have to check where it came from.
-					if (ImportDiscovery.validCalls.has(calleeName))
-						return true;
+			if (t.isTemplateLiteral(init))
+				return false;
 
-					// We can check where the callee came from.
-					const newBinding = programPath.scope.getBinding(calleeName);
-					if (!newBinding)
-						return false;
-
-					return this.hasValidCallAssignment(programPath, newBinding);
-				}
-			}
-			else if (t.isIdentifier(node.init)) {
-				const referencedName = node.init.name;
+			// Follow identifiers: const MyElement = SomeOtherElement
+			if (t.isIdentifier(init)) {
+				const referencedName = init.name;
 				const newBinding = programPath.scope.getBinding(referencedName);
 				if (!newBinding)
 					return false;
 
-				return this.hasValidCallAssignment(programPath, newBinding);
+				return this.isClass(programPath, newBinding);
 			}
+
+			// Skip call expressions
+			if (t.isCallExpression(init))
+				return false;
 		}
-		else if (t.isImportSpecifier(node)) {
-			const imported = node.imported;
-			const importedName = t.isIdentifier(imported)
-				? imported.name
-				: imported.value;
-
-			if (ImportDiscovery.validCalls.has(importedName))
-				return true;
-
-			// Since the imported name is not a valid call,
-			// we need to resolve the import, and rerun the followCallBinding
-			// using the new programPath.
+		else if (t.isImportSpecifier(node) || t.isImportDefaultSpecifier(node)) {
 			const importDeclaration = binding.path.parent;
-			if (t.isImportDeclaration(importDeclaration)) {
-				const resolvedPath = this.resolveSourcePath(programPath, importDeclaration.source.value);
-				if (!resolvedPath)
-					return false;
+			if (!t.isImportDeclaration(importDeclaration))
+				return false;
 
-				// We can now follow the new path
-				const newProgramPath = this.getProgramPathFromFile(resolvedPath);
-				if (!newProgramPath)
-					return false;
+			const resolvedPath = this.resolveSourcePath(programPath, importDeclaration.source.value);
+			if (!resolvedPath)
+				return false;
 
-				const newBinding = newProgramPath.scope.getBinding(importedName);
-				if (!newBinding) {
-					// If there is no binding for this import, it might be because it comes from an export.
-					const exportChainResult = this.followExportChain(newProgramPath, importedName);
-					if (!exportChainResult)
-						return false;
+			const newProgramPath = this.getProgramPathFromFile(resolvedPath);
+			if (!newProgramPath)
+				return false;
 
-					return this.hasValidCallAssignment(
-						exportChainResult.programPath,
-						exportChainResult.binding,
-					);
-				}
+			const importedName = t.isImportDefaultSpecifier(node)
+				? 'default'
+				: t.isIdentifier(node.imported)
+					? node.imported.name
+					: node.imported.value;
 
-				return this.hasValidCallAssignment(newProgramPath, newBinding);
-			}
-		}
-		else if (t.isIdentifier(node)) {
-			// Handle function parameters with type annotations like (Element: typeof DiscoveryTest)
-			if (t.isTSTypeAnnotation(node.typeAnnotation)) {
-				const typeAnnotation = node.typeAnnotation.typeAnnotation;
+			const newBinding = newProgramPath.scope.getBinding(importedName);
+			if (newBinding)
+				return this.isClass(newProgramPath, newBinding);
 
-				// Check for direct type reference to ToComponent or ToTag
-				if (this.hasValidTypeAnnotation(node.typeAnnotation))
-					return true;
+			const exportChainResult = this.followExportChain(newProgramPath, importedName);
+			if (!exportChainResult)
+				return false;
 
-				if (t.isTSTypeQuery(typeAnnotation)) {
-					// Extract the referenced type name from TSTypeQuery (typeof SomeVariable)
-					const exprName = typeAnnotation.exprName;
-
-					if (t.isIdentifier(exprName)) {
-						const referencedName = exprName.name;
-						const newBinding = programPath.scope.getBinding(referencedName);
-						if (!newBinding)
-							return false;
-
-						return this.hasValidCallAssignment(programPath, newBinding);
-					}
-				}
-			}
+			return this.isClass(
+				exportChainResult.programPath,
+				exportChainResult.binding,
+			);
 		}
 
 		return false;
 	}
 
-	protected hasValidTypeAnnotation(typeAnnotation: t.Identifier['typeAnnotation']): boolean {
-		if (!t.isTSTypeAnnotation(typeAnnotation))
+	/**
+	 * Recursively follows a binding to determine if it resolves to a class or string literal.
+	 */
+	protected isClassOrStringLiteral(programPath: NodePath<t.Program>, binding: Binding): boolean {
+		const node = binding.path.node;
+
+		// Check for class declarations: class MyElement extends HTMLElement {}
+		if (t.isClassDeclaration(node))
+			return true;
+
+		if (t.isVariableDeclarator(node)) {
+			const init = node.init;
+			if (!init)
+				return false;
+
+			// Check for class expressions: const MyElement = class {}
+			if (t.isClassExpression(init))
+				return true;
+
+			// Check for string literals: const MyElement = 'my-element'
+			if (t.isStringLiteral(init))
+				return true;
+
+			// Check for template literals that are static: const MyElement = `my-element`
+			if (t.isTemplateLiteral(init) && init.expressions.length === 0 && init.quasis.length === 1)
+				return true;
+
+			// Follow identifiers: const MyElement = SomeOtherElement
+			if (t.isIdentifier(init)) {
+				const referencedName = init.name;
+				const newBinding = programPath.scope.getBinding(referencedName);
+				if (!newBinding)
+					return false;
+
+				return this.isClassOrStringLiteral(programPath, newBinding);
+			}
+
+			// Follow call expressions that might return a class or string
+			if (t.isCallExpression(init)) {
+				// We can't determine the return type of arbitrary functions without type checking
+				// So we skip call expressions for now
+				return false;
+			}
+		}
+		else if (t.isImportSpecifier(node) || t.isImportDefaultSpecifier(node)) {
+			const importDeclaration = binding.path.parent;
+			if (!t.isImportDeclaration(importDeclaration))
+				return false;
+
+			const resolvedPath = this.resolveSourcePath(programPath, importDeclaration.source.value);
+			if (!resolvedPath)
+				return false;
+
+			const newProgramPath = this.getProgramPathFromFile(resolvedPath);
+			if (!newProgramPath)
+				return false;
+
+			// Get the imported name
+			const importedName = t.isImportDefaultSpecifier(node)
+				? 'default'
+				: t.isIdentifier(node.imported)
+					? node.imported.name
+					: node.imported.value;
+
+			// Try to find binding in the imported file
+			const newBinding = newProgramPath.scope.getBinding(importedName);
+			if (newBinding)
+				return this.isClassOrStringLiteral(newProgramPath, newBinding);
+
+			// If no binding, check export chain
+			const exportChainResult = this.followExportChain(newProgramPath, importedName);
+			if (!exportChainResult)
+				return false;
+
+			return this.isClassOrStringLiteral(
+				exportChainResult.programPath,
+				exportChainResult.binding,
+			);
+		}
+		else if (t.isIdentifier(node)) {
+			// Handle function parameters: function render(Element: typeof MyElement)
+			// We can't determine the actual type without type checking, skip for now
 			return false;
-
-		const typeRef = typeAnnotation.typeAnnotation;
-		if (t.isTSTypeReference(typeRef) && t.isIdentifier(typeRef.typeName)) {
-			const typeName = typeRef.typeName.name;
-
-			return ImportDiscovery.validTypes.has(typeName);
 		}
 
 		return false;
@@ -297,4 +367,12 @@ export const isDynamicOrCustomElement = (
 	discovery ??= new ImportDiscovery();
 
 	return discovery.isDynamicOrCustomELement(...args);
+};
+
+export const isClassByImportDiscovery = (
+	...args: Parameters<ImportDiscovery['isClassByImportDiscovery']>
+): ReturnType<ImportDiscovery['isClassByImportDiscovery']> => {
+	discovery ??= new ImportDiscovery();
+
+	return discovery.isClassByImportDiscovery(...args);
 };

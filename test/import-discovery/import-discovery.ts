@@ -1,7 +1,4 @@
-import { type ToComponent, toComponent } from '../../src/utils.ts';
-
-
-export class DiscoveryTestCmp extends HTMLElement {
+export class DiscoveryTest extends HTMLElement {
 
 	static tagName = 'discovery-test-cmp';
 
@@ -14,8 +11,6 @@ export class DiscoveryTestCmp extends HTMLElement {
 	}
 
 }
-
-export const DiscoveryTest: ToComponent<DiscoveryTestCmp> = toComponent(DiscoveryTestCmp);
 
 
 export function RegularFunction(): string {
