@@ -54,5 +54,8 @@
 		"vite": "catalog:",
 		"vitepress": "catalog:",
 		"vitest": "catalog:"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org/"
 	}
 }
