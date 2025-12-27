@@ -4,7 +4,7 @@ import type * as csstype from 'csstype';
 declare global {
 	namespace LitJSX {
 
-		interface CSSProperties extends csstype.Properties { }
+		type CSSProperties = csstype.Properties & Record<string, string | number>;
 
 		/**
 		 * Interface for native HTML elements
@@ -24,6 +24,9 @@ declare global {
 		/**
 		 * Interface for semantic tags that start with "s-".
 		 */
-		interface SemanticTags { [key: `s-${ string }`]: JSXElementProps<HTMLElement>; }
+		interface SemanticTags {
+			/** Semantic tags that start with "s-". */
+			[key: `s-${ string }`]: JSXElementProps<HTMLElement>;
+		}
 	}
 }

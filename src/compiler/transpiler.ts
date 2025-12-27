@@ -21,6 +21,7 @@ import {
 import {
 	Ensure,
 	getJSXElementName,
+	getPathFilename,
 	isJSXCustomElementComponent,
 	isJSXFunctionElementComponent,
 	isValidJSXElement,
@@ -32,6 +33,7 @@ import {
 	VARIABLES,
 	WHITESPACE_TAGS,
 } from './config.js';
+import { isClassByType } from './type-utils.js';
 
 
 const toCamelCase = (name: string) => name
@@ -125,11 +127,19 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 
 	override openingTag(context: TemplateContext): void {
 		if (isJSXCustomElementComponent(context.path)) {
+			// Check if this is a class component (needs .tagName accessor)
+			let isClass = false;
+			if (options.useTypeInference && t.isJSXElement(context.path.node)) {
+				const filename = getPathFilename(context.path);
+				isClass = isClassByType(context.path as NodePath<t.JSXElement>, filename) === true;
+			}
+
 			const literalIdentifier = Ensure.componentLiteral(
 				context.tagName,
 				COMPONENT_LITERAL_PREFIX + context.tagName,
 				context.path,
 				context.program,
+				isClass,
 			);
 
 			context.literalName = literalIdentifier.name;

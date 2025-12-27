@@ -53,6 +53,8 @@ suite('Type Inference Tests', () => {
 		expect(code).toContain('__$htmlStatic');
 		expect(code).toContain('__$literalMap');
 		expect(code).not.toContain('MyElement({})');
+		// Should use MyElement.tagName instead of MyElement directly
+		expect(code).toContain('__$literalMap.get(MyElement.tagName)');
 	});
 
 	test('detects class component with properties', ({ expect }) => {
@@ -69,6 +71,8 @@ suite('Type Inference Tests', () => {
 		expect(code).toContain('__$htmlStatic');
 		expect(code).toContain('__$literalMap');
 		expect(code).not.toContain('CustomButton({');
+		// Should use CustomButton.tagName for class components
+		expect(code).toContain('__$literalMap.get(CustomButton.tagName)');
 	});
 
 	test('detects imported class component', ({ expect }) => {
@@ -115,6 +119,9 @@ suite('Type Inference Tests', () => {
 		expect(code).toContain('__$htmlStatic');
 		expect(code).toContain('__$literalMap');
 		expect(code).not.toContain('MyElement({})');
+		// String literals should NOT use .tagName accessor
+		expect(code).toContain('__$literalMap.get(MyElement)');
+		expect(code).not.toContain('__$literalMap.get(MyElement.tagName)');
 	});
 
 	test('detects const string literal element', ({ expect }) => {

@@ -75,6 +75,53 @@ export const isClassOrCustomElementByType = (
 };
 
 /**
+ * Checks if a JSX element refers to a class (not a string literal) based on TypeScript type information.
+ *
+ * Returns:
+ * - `true` if the element is a class constructor (should use .tagName accessor)
+ * - `false` if the element is a string literal or function component
+ * - `undefined` if type checking is not available or the type cannot be determined
+ */
+export const isClassByType = (
+	path: NodePath<t.JSXElement>,
+	filename: string,
+): boolean | undefined => {
+	// Normalize path once at the start
+	const normalizedFilename = filename.replace(/\\/g, '/');
+
+	// Get the tag name from the JSX element
+	const openingElement = path.node.openingElement;
+	if (!t.isJSXIdentifier(openingElement.name))
+		return undefined;
+
+	const tagName = openingElement.name.name;
+
+	const typeChecker = getTypeChecker();
+	const sourceFile = getSourceFile(normalizedFilename);
+
+	if (!typeChecker || !sourceFile)
+		return undefined;
+
+	// Lazy-load: Ensure any imported file defining this symbol is loaded
+	ensureImportLoaded(tagName, normalizedFilename);
+
+	// Find the symbol at the JSX usage location
+	const identifier = findIdentifierInJSX(sourceFile, tagName);
+	if (!identifier)
+		return undefined;
+
+	const symbol = typeChecker.getSymbolAtLocation(identifier);
+	if (!symbol)
+		return undefined;
+
+	// Get the type of the symbol
+	const type = typeChecker.getTypeOfSymbolAtLocation(symbol, identifier);
+	const result = checkTypeForClass(type, typeChecker);
+
+	return result;
+};
+
+/**
  * Helper function to check if a type represents a static element (class/string) or dynamic (function)
  */
 function checkTypeForStaticOrDynamic(
@@ -114,6 +161,38 @@ function checkTypeForStaticOrDynamic(
 
 	// If we can't determine, return undefined
 	return undefined;
+}
+
+/**
+ * Helper function to check if a type represents a class (not a string literal)
+ */
+function checkTypeForClass(
+	type: ts.Type,
+	typeChecker: ts.TypeChecker,
+): boolean | undefined {
+	// String literals should return false (they're not classes)
+	if (type.flags & ts.TypeFlags.StringLiteral)
+		return false;
+
+	// Union types of string literals should return false
+	if (type.flags & ts.TypeFlags.Union) {
+		const unionType = type as ts.UnionType;
+		const allStringLiterals = unionType.types.every(t => t.flags & ts.TypeFlags.StringLiteral);
+		if (allStringLiterals)
+			return false;
+	}
+
+	// Check if it's a class type
+	if (type.symbol?.flags & ts.SymbolFlags.Class)
+		return true;
+
+	// Check if it has construct signatures (it's a constructor/class reference)
+	const constructSignatures = typeChecker.getSignaturesOfType(type, ts.SignatureKind.Construct);
+	if (constructSignatures.length > 0)
+		return true;
+
+	// Not a class
+	return false;
 }
 
 /**

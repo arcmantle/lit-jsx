@@ -398,8 +398,18 @@ export class Ensure {
 		variableName: string,
 		path: NodePath,
 		program: t.Program,
+		isClass = false,
 	): t.Identifier {
 		EnsureImport.literalMap(program, path);
+
+		// For class components, use MyElement.tagName to access the tag name
+		// For string literals, use the identifier directly
+		const literalMapArgument = isClass
+			? t.memberExpression(
+				t.identifier(tagName),
+				t.identifier('tagName'),
+			)
+			: t.identifier(tagName);
 
 		return this.componentTagDeclaration(
 			path,
@@ -412,7 +422,7 @@ export class Ensure {
 						t.identifier(VARIABLES.LITERAL_MAP),
 						t.identifier('get'),
 					),
-					[ t.identifier(tagName) ],
+					[ literalMapArgument ],
 				),
 			),
 		);

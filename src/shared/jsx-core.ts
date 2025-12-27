@@ -2,42 +2,120 @@ import type { DirectiveResult } from 'lit-html/async-directive.js';
 import type { RefOrCallback } from 'lit-html/directives/ref.js';
 
 
+declare const explicitSymbol: unique symbol;
+
+
 declare global {
 	namespace LitJSX {
+		interface ExplicitBrand { [explicitSymbol]?: never; }
+		type Explicit<T> = T & ExplicitBrand;
+		type IsMandatory<T> = T extends { [explicitSymbol]?: never; }
+			? (typeof explicitSymbol extends keyof T ? true : false)
+			: false;
+		type UnwrapMandatory<T> = T extends Explicit<infer U> ? U : T;
+		type PartialExceptRequired<T extends object> = {
+			[P in keyof T as IsMandatory<T[P]> extends true ? P : never]: UnwrapMandatory<T[P]>
+		} & {
+			[P in keyof T as IsMandatory<T[P]> extends true ? never : P]?: T[P]
+		};
 
+		/**
+		 * Interface which can be used to exclude certain component props from being
+		 * mapped to HTMLElement props.  For example, to exclude `ref` from being
+		 * mapped to `HTMLElement.ref`, you can add the following:
+		 * 'arbitrary-key-goes-here': 'ref';
+		 */
 		interface ExcludedComponentProps {
-			'html-element': keyof HTMLElement;
+			'html-element': keyof HTMLElement | 'constructor';
 		}
 
 		type ExcludedKeys = {
 			[K in keyof ExcludedComponentProps]: ExcludedComponentProps[K];
 		}[keyof ExcludedComponentProps];
 
-		type HTMLElementAssignableProps<T extends object & Record<string, any>> =
-			Partial<TrimReadonly<T>>;
+		type IndexableObject = object & Record<string, any>;
 
-		type HTMLElementProps = HTMLElementAssignableProps<HTMLElement>;
+		type HTMLElementAssignableProps<T extends IndexableObject> =
+			Partial<TrimReadonly<T>>;
 
 		type JSXElementProps<T extends object> = SpecialProps<HTMLElementAssignableProps<T>>;
 
-		type SpecialProps<T extends object = object> = Omit<T, 'style'> & {
-			children?:  LitJSX.Child;
-			ref?:       RefOrCallback<HTMLElementAssignableProps<T>>;
+		interface DataProps {
+			[key: `data-${ string }`]: string | undefined;
+		}
+
+		type SpecialProps<T extends object = object> = Omit<T, 'style' | 'styleList' | 'class' | 'classList'> & {
+			/**
+			 * Opt into the lit-jsx custom-element transform.
+			 *
+			 * Example: `<MyElement static />`
+			 *
+			 * This is only required when not using type-inference option.
+			 * or using javascript without type checking.
+			 */
+			static?: true;
+
+			/**
+			 * The children of this JSX element.
+			 *
+			 * Example: `<div>Children here</div>` \
+			 * Example with expression: `<div>{someValue}</div>`
+			 *
+			 * This property should generally not be set directly, but rather via
+			 * the content between the opening and closing tags of the JSX element.
+			 */
+			children?: LitJSX.Child;
+
+			/**
+			 * A reference to the underlying element.
+			 *
+			 * Example: `<div ref={myRef}></div>` \
+			 * Example with callback: `<div ref={(el) => { ... }}></div>`
+			 */
+			ref?: RefOrCallback<HTMLElementAssignableProps<T>>;
+
+			/**
+			 * An object defining CSS classes.
+			 *
+			 * Example: `<div classList={{ myClass: true, anotherClass: false }}></div>`
+			 */
 			classList?: { [k: string]: boolean | undefined; };
+
+			/**
+			 * An object defining CSS properties.
+			 *
+			 * Example: `<div styleList={{ color: 'red', fontSize: '16px' }}></div>`
+			 */
 			styleList?: CSSProperties;
-			class?:     { [k: string]: boolean | undefined; } | string;
-			style?:     CSSProperties | string;
+
+			/**
+			 * A string or object defining CSS classes or styles. \
+			 * When a string is provided, it is set directly on the `class` or `style` attribute. \
+			 * When an object is provided, its keys and values are set as CSS properties.
+			 *
+			 * Example 1: `<div class={{ myClass: true, anotherClass: false }}></div>` \
+			 * Example 2: `<div class="my-class another-class"></div>`
+			 */
+			class?: { [k: string]: boolean | undefined; } | string;
+
+			/**
+			 * A string or object defining CSS styles. \
+			 * When a string is provided, it is set directly on the `style` attribute. \
+			 * When an object is provided, its keys and values are set as CSS properties.
+			 *
+			 * Example 1: `<div style={{ color: 'red', fontSize: '16px' }}></div>` \
+			 * Example 2: `<div style="color: red; font-size: 16px;"></div>`
+			 */
+			style?: CSSProperties | string;
 
 			/**
 			 * This property takes in one or more element directives.
 			 * This is akin to applying a directive through `<div ${myDirective()}></div>`.
 			 */
 			directive?: DirectiveResult<any> | DirectiveResult<any>[];
-		} & {
-			[key: `data-${ string }`]: string | undefined;
-		};
+		} & DataProps;
 
-		type ElementMapToJSXElements<T extends object & Record<string, any>> = {
+		type ElementMapToJSXElements<T extends IndexableObject> = {
 			[K in keyof T]: JSXElementProps<T[K]>;
 		};
 
@@ -55,13 +133,11 @@ declare global {
 
 		type TrimReadonly<T> = Pick<T, WritableKeys<T>>;
 
-		type TrimHTMLElement<T extends object> = TrimReadonly<
-			Omit<T, ExcludedKeys | 'constructor'>
-		>;
+		type TrimHTMLElement<T extends object> = TrimReadonly<Omit<T, ExcludedKeys>>;
 
 		type JSXProps<T extends object>
-			= TrimHTMLElement<T>
-			& Omit<HTMLElementProps, keyof TrimHTMLElement<T>>;
+			= PartialExceptRequired<TrimHTMLElement<T>>
+			& Partial<Omit<TrimReadonly<HTMLElement>, keyof TrimHTMLElement<T>>>;
 
 		type Child = unknown;
 		type Element = unknown;
@@ -82,21 +158,10 @@ declare global {
 				? JSXElementProps<HTMLElementTagNameMap[Tag]>
 				: JSXElementProps<HTMLElement>);
 
-		type IntrinsicElementProps<Tag extends keyof IntrinsicElements> = IntrinsicElements[Tag];
-
-		type DynamicTag<Tag extends TagName> = ((props: DynamicTagProps<Tag> & StaticMarker) => Element);
-
-		interface StaticMarker {
-			/**
-			 * Opt into the lit-jsx custom-element transform. \
-			 * Example: `<MyElement static />`
-			 */
-			static?: true;
-		}
+		type DynamicTag<Tag extends TagName> = ((props: DynamicTagProps<Tag>) => Element);
 
 		type Component<P extends object = {}> = (props: P) => Element;
 		type ClassComponent<Instance extends object = any> = abstract new (...args: any[]) => Instance;
-
 		type ComponentLike<P extends object = object> =
 			| Component<P>
 			| ClassComponent<any>;
