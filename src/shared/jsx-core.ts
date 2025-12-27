@@ -8,7 +8,22 @@ declare const explicitSymbol: unique symbol;
 declare global {
 	namespace LitJSX {
 		interface ExplicitBrand { [explicitSymbol]?: never; }
+
+		/**
+		 * Marks a type as explicitly required when used in JSX props. \
+		 * This allows making certain props required, while keeping the rest optional.
+		 *
+		 * Example:
+		 * ```
+		 * class MyElement extends LitElement {
+		 *    name: LitJSX.Explicit<string>;
+		 *    size: number;
+		 * }
+		 *	```
+		 * In this example, `name` is required while `size` is optional.
+		 */
 		type Explicit<T> = T & ExplicitBrand;
+
 		type IsMandatory<T> = T extends { [explicitSymbol]?: never; }
 			? (typeof explicitSymbol extends keyof T ? true : false)
 			: false;
@@ -21,9 +36,19 @@ declare global {
 
 		/**
 		 * Interface which can be used to exclude certain component props from being
-		 * mapped to HTMLElement props.  For example, to exclude `ref` from being
-		 * mapped to `HTMLElement.ref`, you can add the following:
-		 * 'arbitrary-key-goes-here': 'ref';
+		 * mapped to HTMLElement props.
+		 *
+		 * For example, to exclude `ref` from being available in <MyElement>, \
+		 * you can create an extension like this:
+		 * ```
+		 * declare global {
+		 *   namespace LitJSX {
+		 *     interface ExcludedComponentProps {
+		 *       'arbitrary-name': 'ref';
+		 *     }
+		 *   }
+		 * }
+		 * ```
 		 */
 		interface ExcludedComponentProps {
 			'html-element': keyof HTMLElement | 'constructor';
