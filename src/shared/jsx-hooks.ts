@@ -40,13 +40,13 @@ declare global {
 				// if C is a class component constructor
 				? (P extends I
 					// if props P are compatible with instance I
-					? LitJSX.SpecialProps<LitJSX.JSXProps<P>>
+					? LitJSX.JSXElementProps<P>
 					// else fall back to general props for I
-					: LitJSX.SpecialProps<LitJSX.ComponentProps<C>>)
+					: LitJSX.ComponentProps<C>)
 				// if C is a functional component or intrinsic element
 				: (C extends keyof LitJSX.IntrinsicElements
 					? LitJSX.IntrinsicElements[C]
-					// intrinsic element
+					// intrinsic element|
 					: P);
 
 		/*

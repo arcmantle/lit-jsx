@@ -34,36 +34,19 @@ declare global {
 			[P in keyof T as IsMandatory<T[P]> extends true ? never : P]?: T[P]
 		};
 
-		/**
-		 * Interface which can be used to exclude certain component props from being
-		 * mapped to HTMLElement props.
-		 *
-		 * For example, to exclude `ref` from being available in <MyElement>, \
-		 * you can create an extension like this:
-		 * ```
-		 * declare global {
-		 *   namespace LitJSX {
-		 *     interface ExcludedComponentProps {
-		 *       'arbitrary-name': 'ref';
-		 *     }
-		 *   }
-		 * }
-		 * ```
-		 */
-		interface ExcludedComponentProps {
-			'html-element': keyof HTMLElement | 'constructor';
-		}
+		type IfEquals<X, Y, A = X> =
+			(<T>() => T extends X ? 1 : 2) extends
+			(<T>() => T extends Y ? 1 : 2) ? A : never;
 
-		type ExcludedKeys = {
-			[K in keyof ExcludedComponentProps]: ExcludedComponentProps[K];
-		}[keyof ExcludedComponentProps];
+		type WritableKeys<T> = {
+			[P in keyof T]-?: IfEquals<
+				{ [Q in P]: T[P] },
+				{ -readonly [Q in P]: T[P] },
+				P
+			>
+		}[keyof T];
 
-		type IndexableObject = object & Record<string, any>;
-
-		type HTMLElementAssignableProps<T extends IndexableObject> =
-			Partial<TrimReadonly<T>>;
-
-		type JSXElementProps<T extends object> = SpecialProps<HTMLElementAssignableProps<T>>;
+		type TrimReadonly<T> = Pick<T, WritableKeys<T>>;
 
 		interface DataProps {
 			[key: `data-${ string }`]: string | undefined;
@@ -97,7 +80,7 @@ declare global {
 			 * Example: `<div ref={myRef}></div>` \
 			 * Example with callback: `<div ref={(el) => { ... }}></div>`
 			 */
-			ref?: RefOrCallback<HTMLElementAssignableProps<T>>;
+			ref?: RefOrCallback<PartialExceptRequired<TrimReadonly<T>>>;
 
 			/**
 			 * An object defining CSS classes.
@@ -140,29 +123,11 @@ declare global {
 			directive?: DirectiveResult<any> | DirectiveResult<any>[];
 		} & DataProps;
 
-		type ElementMapToJSXElements<T extends IndexableObject> = {
+		type JSXElementProps<T extends object> = SpecialProps<PartialExceptRequired<TrimReadonly<T>>>;
+
+		type ElementMapToJSXElements<T extends Record<string, any>> = {
 			[K in keyof T]: JSXElementProps<T[K]>;
 		};
-
-		type IfEquals<X, Y, A = X> =
-			(<T>() => T extends X ? 1 : 2) extends
-			(<T>() => T extends Y ? 1 : 2) ? A : never;
-
-		type WritableKeys<T> = {
-			[P in keyof T]-?: IfEquals<
-				{ [Q in P]: T[P] },
-				{ -readonly [Q in P]: T[P] },
-				P
-			>
-		}[keyof T];
-
-		type TrimReadonly<T> = Pick<T, WritableKeys<T>>;
-
-		type TrimHTMLElement<T extends object> = TrimReadonly<Omit<T, ExcludedKeys>>;
-
-		type JSXProps<T extends object>
-			= PartialExceptRequired<TrimHTMLElement<T>>
-			& Partial<Omit<TrimReadonly<HTMLElement>, keyof TrimHTMLElement<T>>>;
 
 		type Child = unknown;
 		type Element = unknown;
@@ -193,8 +158,8 @@ declare global {
 
 		type ComponentProps<T> =
 			T extends Component<infer P> ? P :
-				T extends ClassComponent<infer I> ? JSXProps<Extract<I, object>> :
-					T extends abstract new (...args: any[]) => infer I ? JSXProps<Extract<I, object>> :
+				T extends ClassComponent<infer I> ? JSXElementProps<Extract<I, object>> :
+					T extends abstract new (...args: any[]) => infer I ? JSXElementProps<Extract<I, object>> :
 						{};
 	}
 

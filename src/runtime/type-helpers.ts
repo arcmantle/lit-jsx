@@ -36,7 +36,7 @@ export const toComponent = <T extends { new(...args: any): any; tagName: string;
 };
 
 export type ToComponent<T extends object = object> =
-	(props: LitJSX.JSXProps<T> & { static: any; }) => string;
+	(props: LitJSX.JSXElementProps<T> & { static: any; }) => string;
 
 
 /**
