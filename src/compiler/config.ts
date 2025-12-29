@@ -93,9 +93,9 @@ export const ERROR_MESSAGES = {
 
 
 interface PluginOptions {
-	useCompiledTemplates?: boolean;
-	useImportDiscovery?:   boolean;
-	useTypeInference?:     boolean;
+	useCompiledTemplates: boolean;
+	useImportDiscovery:   boolean;
+	useTypeInference:     boolean;
 }
 
 
@@ -106,10 +106,12 @@ export const initializePluginOptions = (file: BabelFile): PluginOptions => {
 	optionsInitialized = true;
 
 	const plugin = file.opts?.plugins?.find(plugin =>
-		(plugin as PluginPass).key === 'lit-jsx-transform') as { options?: PluginOptions; };
+		(plugin as PluginPass).key === 'lit-jsx-transform') as { options?: Partial<PluginOptions>; };
 
-	const pluginOptions = plugin?.options || {};
-	pluginOptions.useCompiledTemplates ??= true;
+	const pluginOptions: PluginOptions = {
+		...defaultOptions,
+		...plugin?.options,
+	};
 
 	for (const [ key, value ] of Object.entries(pluginOptions))
 		options[key as keyof typeof options] = value as any;
@@ -118,13 +120,22 @@ export const initializePluginOptions = (file: BabelFile): PluginOptions => {
 };
 
 
-export const getPluginOptions = (file: BabelFile): PluginOptions => {
+export const getPluginOptions = (file: BabelFile): Partial<PluginOptions> => {
 	const plugin = file.opts?.plugins?.find(plugin =>
-		(plugin as PluginPass).key === 'lit-jsx-transform') as { options?: PluginOptions; };
+		(plugin as PluginPass).key === 'lit-jsx-transform') as { options?: Partial<PluginOptions>; };
 
 	return plugin.options ?? {};
 };
 
 
+const defaultOptions: PluginOptions = {
+	useCompiledTemplates: true,
+	useImportDiscovery:   false,
+	useTypeInference:     false,
+};
+
+
 let optionsInitialized = false;
-export const options: PluginOptions = {};
+export const options: PluginOptions = {
+	...defaultOptions,
+};
