@@ -134,43 +134,17 @@ import { cache } from 'lit/directives/cache.js'
 function TabPanel({ activeTab }) {
   return (
     <div>
-      {as.directive(cache(
+      {cache(
         activeTab === 'home' ? <HomePage /> :
         activeTab === 'profile' ? <ProfilePage /> :
         <SettingsPage />
-      ))}
+      )}
     </div>
   )
 }
 
 // DOM is preserved when switching tabs
 // No need to recreate the tab content
-```
-
-## Event Delegation
-
-Lit automatically uses event delegation for better performance:
-
-```tsx
-function TodoList({ todos, onToggle }) {
-  return (
-    <ul>
-      {todos.map(todo => (
-        <li>
-          <input
-            type="checkbox"
-            checked={as.prop(todo.completed)}
-            onchange={() => onToggle(todo.id)}
-          />
-          {todo.text}
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-// Lit uses a single event listener on the parent
-// Instead of one per checkbox
 ```
 
 ## Lazy Loading
@@ -186,10 +160,10 @@ function App() {
 
   return (
     <div>
-      {as.directive(until(
+      {until(
         HeavyComponent.then(Component => <Component />),
         <div>Loading...</div>
-      ))}
+      )}
     </div>
   )
 }
@@ -205,11 +179,11 @@ import { virtualScroll } from '@arcmantle/virtualizer'
 function LongList({ items }) {
   return (
     <div>
-      {as.directive(virtualScroll({
+      {virtualScroll({
         items,
         renderItem: (item) => <div>{item.name}</div>,
         itemHeight: 50,
-      }))}
+      })}
     </div>
   )
 }

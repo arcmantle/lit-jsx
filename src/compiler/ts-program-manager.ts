@@ -1,4 +1,3 @@
-import type { BabelFile } from '@babel/core';
 import ts from 'typescript';
 
 
@@ -13,8 +12,6 @@ const scriptKinds: Map<string, ts.ScriptKind> = new Map();
 const importMaps: Map<string, Map<string, string>> = new Map();
 // filename -> (symbolName -> isStatic)
 const typeCheckCache: Map<string, Map<string, boolean | undefined>> = new Map();
-// filePath -> (symbolName -> resolvedPath or null if not found)
-const reExportCache: Map<string, Map<string, string | null>> = new Map();
 // containingFile -> (importPath -> resolvedPath)
 const moduleResolutionPathCache: Map<string, Map<string, string | undefined>> = new Map();
 
@@ -90,15 +87,12 @@ export const setCachedTypeCheck = (filename: string, symbolName: string, result:
 };
 
 /**
- * Initialize TypeScript Language Service for type inference.
- * Creates service once, then incrementally updates on each file transform.
- * Much faster for dev servers with HMR!
+ * Ensure a file is loaded into the TypeScript Language Service.
+ * Initializes the Language Service lazily on first use.
+ * Only called when type inference is actually needed.
  */
-export const initializeTypeInference = (file: BabelFile): void => {
-	if (!file.opts.filename)
-		return;
-
-	const normalizedFilename = normalizePath(file.opts.filename);
+export const ensureFileLoaded = (filename: string, code: string): void => {
+	const normalizedFilename = normalizePath(filename);
 
 	// Initialize Language Service on first use
 	if (!languageService) {
@@ -187,7 +181,10 @@ export const initializeTypeInference = (file: BabelFile): void => {
 					return moduleNames.map(() => undefined);
 				}
 
-				// For files we loaded, resolve their imports normally
+				// For files we loaded, ALWAYS resolve their imports
+				// This is critical for barrel exports - TypeScript needs to resolve
+				// re-exports even if we haven't explicitly loaded the target file yet
+				// TypeScript will read from disk if needed
 				return moduleNames.map(moduleName => {
 					const result = ts.resolveModuleName(
 						moduleName,
@@ -212,121 +209,15 @@ export const initializeTypeInference = (file: BabelFile): void => {
 	const previousContent = fileContents.get(normalizedFilename);
 
 	// Only increment version if content actually changed
-	if (previousContent !== file.code) {
+	if (previousContent !== code) {
 		fileVersions.set(normalizedFilename, currentVersion + 1);
-		fileContents.set(normalizedFilename, file.code);
+		fileContents.set(normalizedFilename, code);
 		scriptKinds.set(normalizedFilename, ts.ScriptKind.TSX);
 
 		// Clear cached type-check results for this file since content changed
 		typeCheckCache.delete(normalizedFilename);
 	}
 };
-
-/**
- * Check if a file re-exports a symbol and return the source file path.
- * Handles: export { X } from './file', export { X as Y } from './file', export * from './file'
- */
-function findReExportSource(
-	filePath: string,
-	symbolName: string,
-): string | undefined {
-	if (!compilerOptions || !moduleResolutionCache || !languageService)
-		return undefined;
-
-	const normalizedPath = normalizePath(filePath);
-
-	// Check re-export cache first
-	const cached = reExportCache.get(normalizedPath);
-	if (cached?.has(symbolName)) {
-		const result = cached.get(symbolName);
-
-		return result === null ? undefined : result;
-	}
-
-	// Use cached source file from Language Service instead of creating new one
-	const sourceFile = languageService.getProgram()?.getSourceFile(normalizedPath);
-	if (!sourceFile) {
-		// Cache the negative result
-		if (!cached)
-			reExportCache.set(normalizedPath, new Map([ [ symbolName, null ] ]));
-		else
-			cached.set(symbolName, null);
-
-		return undefined;
-	}
-
-	for (const statement of sourceFile.statements) {
-		// Check: export { X } from './file' or export { X as Y } from './file'
-		if (ts.isExportDeclaration(statement) &&
-			statement.moduleSpecifier &&
-			ts.isStringLiteral(statement.moduleSpecifier)) {
-			const exportPath = statement.moduleSpecifier.text;
-			let isReExported = false;
-
-			// export * from './file' - re-exports everything
-			if (!statement.exportClause) {
-				isReExported = true;
-			}
-			// export { X, Y } from './file'
-			else if (ts.isNamedExports(statement.exportClause)) {
-				for (const element of statement.exportClause.elements) {
-					// Check original name (before 'as')
-					const originalName = element.propertyName?.text || element.name.text;
-					if (originalName === symbolName || element.name.text === symbolName) {
-						isReExported = true;
-						break;
-					}
-				}
-			}
-
-			if (isReExported) {
-				// Check module resolution cache first
-				let pathCache = moduleResolutionPathCache.get(normalizedPath);
-				if (!pathCache) {
-					pathCache = new Map();
-					moduleResolutionPathCache.set(normalizedPath, pathCache);
-				}
-
-				let resolvedPath = pathCache.get(exportPath);
-				if (!resolvedPath) {
-					// Resolve the re-export source
-					const resolution = ts.resolveModuleName(
-						exportPath,
-						normalizedPath,
-						compilerOptions,
-						ts.sys,
-						moduleResolutionCache,
-					);
-
-					if (resolution.resolvedModule?.resolvedFileName) {
-						resolvedPath = normalizePath(resolution.resolvedModule.resolvedFileName);
-						pathCache.set(exportPath, resolvedPath);
-					}
-				}
-
-				if (resolvedPath) {
-					// Cache the result before returning
-					const cache = reExportCache.get(normalizedPath) || new Map();
-					if (!reExportCache.has(normalizedPath))
-						reExportCache.set(normalizedPath, cache);
-
-					cache.set(symbolName, resolvedPath);
-
-					return resolvedPath;
-				}
-			}
-		}
-	}
-
-	// Cache negative result
-	const cache = reExportCache.get(normalizedPath) || new Map();
-	if (!reExportCache.has(normalizedPath))
-		reExportCache.set(normalizedPath, cache);
-
-	cache.set(symbolName, null);
-
-	return undefined;
-}
 
 /**
  * Helper function to resolve and load an import path.
@@ -356,7 +247,9 @@ function resolveAndLoadImport(
 		// Cache the mapping
 		importMap.set(symbolName, resolvedPath);
 
-		// Lazy-load: Only load if not already in Language Service
+		// Lazy-load the resolved file if not already in Language Service
+		// TypeScript's getAliasedSymbol() needs the file in the Language Service
+		// to follow re-export chains automatically
 		if (!fileContents.has(resolvedPath)) {
 			const content = ts.sys.readFile(resolvedPath);
 			if (content) {
@@ -364,30 +257,6 @@ function resolveAndLoadImport(
 				fileVersions.set(resolvedPath, 1);
 				scriptKinds.set(resolvedPath, detectScriptKind(resolvedPath));
 			}
-		}
-
-		// Check if this file re-exports the symbol from another file
-		// This handles barrel exports: export { Component } from './component'
-		// Follow re-export chain recursively
-		let currentSource = resolvedPath;
-		let depth = 0;
-		const maxDepth = 10; // Prevent infinite loops
-
-		while (depth < maxDepth) {
-			const nextSource = findReExportSource(currentSource, symbolName);
-			if (!nextSource || fileContents.has(nextSource))
-				break;
-
-			const nextContent = ts.sys.readFile(nextSource);
-			if (!nextContent)
-				break;
-
-			fileContents.set(nextSource, nextContent);
-			fileVersions.set(nextSource, 1);
-			scriptKinds.set(nextSource, detectScriptKind(nextSource));
-
-			currentSource = nextSource;
-			depth++;
 		}
 
 		return resolvedPath;
@@ -430,7 +299,9 @@ function checkDynamicImports(
 				let matchesSymbol = false;
 
 				// Check if the symbol matches the variable name
-				if (ts.isIdentifier(declaration.name) && declaration.name.text === symbolName) { matchesSymbol = true; }
+				if (ts.isIdentifier(declaration.name) && declaration.name.text === symbolName) {
+					matchesSymbol = true;
+				}
 				// Check destructured imports: const { Component } = await import('...')
 				else if (ts.isObjectBindingPattern(declaration.name)) {
 					for (const element of declaration.name.elements) {
@@ -542,6 +413,5 @@ export const cleanupTypeInference = (): void => {
 	scriptKinds.clear();
 	importMaps.clear();
 	typeCheckCache.clear();
-	reExportCache.clear();
 	moduleResolutionPathCache.clear();
 };

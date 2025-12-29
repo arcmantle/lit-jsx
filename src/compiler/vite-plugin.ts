@@ -9,15 +9,30 @@ import { cleanupTypeInference } from './ts-program-manager.js';
 
 
 export interface LitJsxPluginOptions {
-	/**  Enable legacy decorators support */
+	/**
+	 * Enable legacy decorators support
+	 * @default false
+	 */
 	legacyDecorators?:     boolean;
-	/** Enables support for experimental compiled templates @default true */
+	/**
+	 * Enables support for experimental compiled templates
+	 * @default true
+	 */
 	useCompiledTemplates?: boolean;
-	/** Opts into the automatic discovery is custom elements instead of using the static attribute */
+	/**
+	 * Opts into the automatic discovery is custom elements instead of using the static attribute
+	 * @default false
+	 */
 	useImportDiscovery?:   boolean;
-	/** Enable TypeScript type inference for automatic static/dynamic element detection */
+	/**
+	 * Enable TypeScript type inference for automatic static/dynamic element detection
+	 * @default false
+	 */
 	useTypeInference?:     boolean;
-	/** Enable debug mode for additional logging */
+	/**
+	 * Enable debug mode for additional logging
+	 * @default false
+	 */
 	debug?:                boolean;
 	/** Options for the Babel transform */
 	babel?:

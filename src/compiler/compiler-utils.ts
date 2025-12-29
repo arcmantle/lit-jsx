@@ -38,6 +38,12 @@ export const getPathFilename = (path: NodePath): string => {
 	return currentFileName ?? '';
 };
 
+export const getPathSourceCode = (path: NodePath): string => {
+	const hub = path.hub as Hub & { file?: { code?: string; }; } | undefined;
+
+	return hub?.file?.code ?? '';
+};
+
 
 /**
  * Contains utility methods for retrieving and manipulating node paths in Babel ASTs.
@@ -617,7 +623,8 @@ export const isJSXCustomElementComponent = (
 	// Try type inference if enabled
 	if (options.useTypeInference && t.isJSXElement(node)) {
 		const filename = getPathFilename(path);
-		const isStatic = isClassOrCustomElementByType(path as NodePath<t.JSXElement>, filename);
+		const code = getPathSourceCode(path);
+		const isStatic = isClassOrCustomElementByType(path as NodePath<t.JSXElement>, filename, code);
 		if (isStatic === true)
 			return true;
 	}
@@ -650,7 +657,8 @@ export const isJSXFunctionElementComponent = (
 	// Check type inference - if it's a class/custom element, it's not a function component
 	if (options.useTypeInference && t.isJSXElement(node)) {
 		const filename = getPathFilename(path);
-		const isStatic = isClassOrCustomElementByType(path as NodePath<t.JSXElement>, filename);
+		const code = getPathSourceCode(path);
+		const isStatic = isClassOrCustomElementByType(path as NodePath<t.JSXElement>, filename, code);
 		if (isStatic === true)
 			return false;
 	}

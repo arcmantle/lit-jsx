@@ -2,7 +2,10 @@ import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 import ts from 'typescript';
 
-import { ensureImportLoaded, getCachedTypeCheck, getSourceFile, getTypeChecker, hasCachedTypeCheck, setCachedTypeCheck } from './ts-program-manager.js';
+import {
+	ensureFileLoaded, ensureImportLoaded, getCachedTypeCheck,
+	getSourceFile, getTypeChecker, hasCachedTypeCheck, setCachedTypeCheck,
+} from './ts-program-manager.js';
 
 
 /**
@@ -16,6 +19,7 @@ import { ensureImportLoaded, getCachedTypeCheck, getSourceFile, getTypeChecker, 
 export const isClassOrCustomElementByType = (
 	path: NodePath<t.JSXElement>,
 	filename: string,
+	code: string,
 ): boolean | undefined => {
 	// Normalize path once at the start
 	const normalizedFilename = filename.replace(/\\/g, '/');
@@ -31,6 +35,9 @@ export const isClassOrCustomElementByType = (
 	// Use has-check to properly handle cached undefined values
 	if (hasCachedTypeCheck(normalizedFilename, tagName))
 		return getCachedTypeCheck(normalizedFilename, tagName);
+
+	// Lazy initialization: Only load file and initialize TypeScript when actually needed
+	ensureFileLoaded(normalizedFilename, code);
 
 	const typeChecker = getTypeChecker();
 	const sourceFile = getSourceFile(normalizedFilename);
@@ -64,9 +71,27 @@ export const isClassOrCustomElementByType = (
 		return undefined;
 	}
 
-	// Get the type of the symbol (this follows imports automatically)
-	const type = typeChecker.getTypeOfSymbolAtLocation(symbol, identifier);
-	const result = checkTypeForStaticOrDynamic(tagName, type, typeChecker);
+	// CRITICAL: After loading imports, get a fresh type checker
+	// This ensures TypeScript has the latest program state after loading re-export chain
+	const freshTypeChecker = getTypeChecker();
+	if (!freshTypeChecker) {
+		setCachedTypeCheck(normalizedFilename, tagName, undefined);
+
+		return undefined;
+	}
+
+	// Follow re-exports/aliases to get the actual symbol
+	// Use fresh type checker to ensure it has latest program state
+	const freshSymbol = freshTypeChecker.getSymbolAtLocation(identifier);
+	const actualSymbol = freshSymbol && (freshSymbol.flags & ts.SymbolFlags.Alias)
+		? freshTypeChecker.getAliasedSymbol(freshSymbol)
+		: freshSymbol || symbol;
+
+	// If we have a value declaration, get the type from it
+	const typeNode = actualSymbol.valueDeclaration || identifier;
+	const type = freshTypeChecker.getTypeAtLocation(typeNode);
+
+	const result = checkTypeForStaticOrDynamic(tagName, type, freshTypeChecker);
 
 	// Cache the result
 	setCachedTypeCheck(normalizedFilename, tagName, result);
@@ -85,6 +110,7 @@ export const isClassOrCustomElementByType = (
 export const isClassByType = (
 	path: NodePath<t.JSXElement>,
 	filename: string,
+	code: string,
 ): boolean | undefined => {
 	// Normalize path once at the start
 	const normalizedFilename = filename.replace(/\\/g, '/');
@@ -95,6 +121,9 @@ export const isClassByType = (
 		return undefined;
 
 	const tagName = openingElement.name.name;
+
+	// Lazy initialization: Only load file and initialize TypeScript when actually needed
+	ensureFileLoaded(normalizedFilename, code);
 
 	const typeChecker = getTypeChecker();
 	const sourceFile = getSourceFile(normalizedFilename);
@@ -214,50 +243,3 @@ function findIdentifierInJSX(sourceFile: ts.SourceFile, name: string): ts.Identi
 
 	return visit(sourceFile);
 }
-
-
-/**
- * Alternative approach: Check if a node is a class declaration by examining the Babel AST.
- * This is a fallback when TypeScript type checking is not available.
- */
-export const isClassDeclarationInBabelAST = (
-	path: NodePath<t.JSXElement>,
-): boolean | undefined => {
-	const openingElement = path.node.openingElement;
-	if (!t.isJSXIdentifier(openingElement.name))
-		return undefined;
-
-
-	const tagName = openingElement.name.name;
-	const binding = path.scope.getBinding(tagName);
-
-	if (!binding)
-		return undefined;
-
-
-	const bindingPath = binding.path;
-
-	// Check if it's a class declaration
-	if (bindingPath.isClassDeclaration())
-		return true;
-
-
-	// Check if it's a variable declarator with a class expression
-	if (bindingPath.isVariableDeclarator()) {
-		const init = bindingPath.node.init;
-		if (t.isClassExpression(init))
-			return true;
-
-
-		// Check if it's a string literal
-		if (t.isStringLiteral(init))
-			return true;
-	}
-
-	// Check if it's an import that we can't statically analyze
-	if (bindingPath.isImportSpecifier() || bindingPath.isImportDefaultSpecifier())
-		return undefined; // Can't determine from import alone
-
-
-	return false;
-};

@@ -22,6 +22,7 @@ import {
 	Ensure,
 	getJSXElementName,
 	getPathFilename,
+	getPathSourceCode,
 	isJSXCustomElementComponent,
 	isJSXFunctionElementComponent,
 	isValidJSXElement,
@@ -132,7 +133,8 @@ export class TemplateTranspiler extends JSXTranspiler<TemplateContext> {
 			let isClass = false;
 			if (options.useTypeInference && t.isJSXElement(context.path.node)) {
 				const filename = getPathFilename(context.path);
-				isClass = isClassByType(context.path as NodePath<t.JSXElement>, filename) === true;
+				const code = getPathSourceCode(context.path);
+				isClass = isClassByType(context.path as NodePath<t.JSXElement>, filename, code) === true;
 			}
 			else if (options.useImportDiscovery) {
 				isClass = isClassByImportDiscovery(context.path.get('openingElement'));
