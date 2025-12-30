@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import type { UserConfig } from 'vitest/node';
+import type { TestUserConfig } from 'vitest/node';
 
 
 export default defineConfig({
@@ -7,4 +7,4 @@ export default defineConfig({
 		environment: 'node',
 		globals:     true,
 	},
-}) as UserConfig;
+}) as TestUserConfig;
